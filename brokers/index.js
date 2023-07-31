@@ -1,4 +1,6 @@
-const commsec = require('./commsec');
+const CommSec = require('./commsec');
+
+const commsec = new CommSec();
 
 module.exports = {
     commsec: commsec,
