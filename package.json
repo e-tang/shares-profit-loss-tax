@@ -1,0 +1,34 @@
+{
+  "name": "shares-profit-loss-tax",
+  "version": "1.0.0",
+  "description": "A nodejs app that computes the profit / loss of stock trading for each financial year",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/e-tang/shares-profit-loss-tax.git"
+  },
+  "keywords": [
+    "Australian",
+    "Tax",
+    "Shares",
+    "Stocks",
+    "Profit",
+    "Loss",
+    "CSV",
+    "statements"
+  ],
+  "author": "Eric Tang",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/e-tang/shares-profit-loss-tax/issues"
+  },
+  "homepage": "https://github.com/e-tang/shares-profit-loss-tax#readme",
+  "dependencies": {
+    "node-programmer": "^0.0.28",
+    "data-forge": "^1.9.2",
+    "data-forge-fs": "0.0.8"
+  }
+}
