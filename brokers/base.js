@@ -31,7 +31,7 @@ Broker.prototype.calculate_financial_year_profit = function (portfolio, year) {
     financial_year.total_trades = total_trades;
 }
 
-Broker.prototype.calculate_profit = function (holding, transaction, transactions, last_trade_index) {
+Broker.prototype.calculate_profit = function (holding, transaction, transactions) {
 
     let profit = new models.Profit();
 
@@ -57,8 +57,9 @@ Broker.prototype.calculate_profit = function (holding, transaction, transactions
 
     // now we need to decide whether there is discount for the capital gain
     let acquired_quantity = 0;
-    for (let j = i - 1; j >= last_trade_index; j--) {
-        let last_transaction = transactions[j];
+
+    let last_transaction = null;
+    while((last_transaction = transactions.pop()) != null) {
         profit.transactions.unshift(last_transaction);
 
         acquired_quantity += last_transaction.quantity;
@@ -88,8 +89,16 @@ Broker.prototype.calculate_profit = function (holding, transaction, transactions
         if (acquired_quantity >= transaction.quantity) {
             profit.year_init = last_transaction.date;
             profit.year_close = transaction.date;
+
+            if (acquired_quantity > transaction.quantity) {
+                // the last transaction is not fully used
+                // so we need to put it back to the stack
+                last_transaction.quantity = acquired_quantity - transaction.quantity;
+                transactions.push(last_transaction);
+            }
             break;
         }
+
     }
 
     // now decide which financial year the transaction belongs to
@@ -114,23 +123,25 @@ Broker.prototype.calculate_profit = function (holding, transaction, transactions
     // return profit;
 }
 
-Broker.prototype.update_holdings = function (portfolio, symbol, trades) {
-    if (null != trades || trades.length == 0) {
+Broker.prototype.update_holding = function (portfolio, symbol, trades) {
+    if (!trades || trades.length == 0) {
         console.log("No trades to update");
         return;
     }
 
+    let transactions = [];
+
     // Update portfolio
     let holding = null;
     // let symbol = trades[0].symbol;
-    if (portfolio.symbols.has(transaction.symbol)) {
-        holding = portfolio.symbols.get(transaction.symbol);
+    if (portfolio.holdings.has(transaction.symbol)) {
+        holding = portfolio.holdings.get(transaction.symbol);
     }
     else {
         holding = new models.Holding();
         holding.symbol = transaction.symbol;
         holding.company = transaction.company;
-        portfolio.symbols.set(transaction.symbol, holding);
+        portfolio.holdings.set(transaction.symbol, holding);
     }
 
     let last_transaction = null;
@@ -138,9 +149,10 @@ Broker.prototype.update_holdings = function (portfolio, symbol, trades) {
     for (let i = 0; i < trades.length; i++)
     {
         let transaction = trades[i];
+        transactions.push(transaction);
+
         if (transaction.type == "buy") {
             if (holding.quantity == 0) {
-                last_trade_index = i;
                 holding.average_price = holding.cost / holding.quantity;
             }
             else if (holding.quantity > 0)
@@ -153,12 +165,11 @@ Broker.prototype.update_holdings = function (portfolio, symbol, trades) {
         }
         else if (transaction.type == "sell") {
             if (holding.quantity == 0) {
-                last_trade_index = i;
                 // todo : handle this case
                 // short selling, initialise a new position
             }
             else if (holding.quantity > 0) {
-
+                this.calculate_profit(holding, transaction, transactions, last_trade_index);
             }
             else {
                 // short selling, increase the position

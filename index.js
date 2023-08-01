@@ -28,8 +28,8 @@ function transaction_sort(a, b) {
 let portfolio = new models.Portfolio();
 
 let symbols_array = Array.from(trades.symbols);
-symbols_array.forEach(function (symbol) {
-    let transactions = trades.symbols.get(symbol);
+symbols_array.forEach(function ([symbol, transactions]) {
+    // let transactions = trades.symbols.get(symbol);
     transactions.sort(transaction_sort);
 
     broker.update_holding(portfolio, symbol, transactions);
