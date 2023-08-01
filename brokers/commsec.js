@@ -25,12 +25,7 @@ CommSec.prototype.load = function (files, offset, options) {
     offset = offset || 0;
     options = options || {};
 
-    let trades = {
-        symbols: new Map(),
-        first: null,
-        last: null,
-        years: new Set()
-    }
+    let trades = new models.Trades();
 
     if (!Array.isArray(files)) {
         files = [files];
