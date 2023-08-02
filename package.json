@@ -34,5 +34,8 @@
     "node-programmer": "^0.0.28",
     "data-forge": "^1.9.2",
     "data-forge-fs": "0.0.8"
+  },
+  "bin": {
+    "sprolosta": "./sprolosta.js"
   }
 }

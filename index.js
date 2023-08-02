@@ -62,15 +62,27 @@ portfolio.holdings.forEach(function (holding) {
 });
 console.log("==============================");
 years_array.forEach(function (year) {
+    console.log("==============================");
     console.log("Computing profit / loss for financial year: " + year);
 
     let financial_year_pl = broker.calculate_financial_year_profit(portfolio, year);
 
     console.log("Total profit / loss: " + financial_year_pl.profit);
-    console.log("Total value: " + financial_year_pl.value);
-    console.log("Total cost: " + financial_year_pl.cost);
+    console.log("Total cost: " + financial_year_pl.total_cost);
     console.log("Total profit eligible for discount: " + financial_year_pl.profit_discount);
+    console.log("Total buy (inc. brokerage): " + financial_year_pl.total_buy);
+    console.log("Total sell (inc. brokerage): " + financial_year_pl.total_sell);
     console.log("Total trades: " + financial_year_pl.total_trades);
+    console.log();
+    console.log("All profit: " + financial_year_pl.total_profit_gain);
+    console.log("All loss: " + financial_year_pl.total_profit_loss);
+    console.log();
+    console.log("Total winning trades: " + financial_year_pl.total_profit_trades);
+    console.log("Total losing trades: " + financial_year_pl.total_loss_trades);
+    console.log();
+    console.log("Biggest winning trade: " + financial_year_pl.trade_profit_max.toString());
+    console.log("Biggest losing trade: " + financial_year_pl.trade_loss_max.toString());
+    console.log("==============================");
 });
 
 
