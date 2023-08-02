@@ -72,7 +72,7 @@ Broker.prototype.calculate_financial_year_profit = function (portfolio, year) {
         if (trade_value) {
             total_buy += trade_value.buy;
             total_sell += trade_value.sell;
-            total_trades += trade_value.transactions;
+            total_trades += trade_value.transactions.length;
         }
     });
     financial_year.profit = total_profit;
@@ -88,6 +88,18 @@ Broker.prototype.calculate_financial_year_profit = function (portfolio, year) {
     financial_year.trade_profit_max = trade_profit_max;
     financial_year.trade_loss_max = trade_loss_max;
     return financial_year;
+}
+
+Broker.prototype.get_holding_profits_year = function (holding, financial_year) {
+    // now decide which financial year the transaction belongs to
+    // for any given year, the financial year is from 1 July of previous year to 30 June of current year
+    // e.g. for 2018, the financial year is from 1 July 2018 to 30 June 2019
+    let profits_year = holding.profits.get(financial_year);
+    if (profits_year == null) {
+        profits_year = [];
+        holding.profits.set(financial_year, profits_year);
+    }
+    return profits_year;
 }
 
 Broker.prototype.calculate_profit = function (holding, transaction, transactions, financial_year) {
@@ -156,8 +168,8 @@ Broker.prototype.calculate_profit = function (holding, transaction, transactions
             if (year1 != year2) {
                 console.log("Close trade that spans over 2 financial years");
                 console.log("Symbol: " + transaction.symbol);
-                console.log("Trade 1: " + last_transaction.date.toISOString() + " " + last_transaction.quantity);
-                console.log("Trade 2: " + transaction.date.toISOString() + " " + transaction.quantity);
+                console.log("Trade 1: " + last_transaction.date.toISOString() + " " + last_transaction.type + " " + last_transaction.quantity);
+                console.log("Trade 2: " + transaction.date.toISOString() + " " + transaction.type + " " + transaction.quantity);
             }
 
             if (acquired_quantity > transaction.quantity) {
@@ -172,14 +184,7 @@ Broker.prototype.calculate_profit = function (holding, transaction, transactions
 
     }
 
-    // now decide which financial year the transaction belongs to
-    // for any given year, the financial year is from 1 July of previous year to 30 June of current year
-    // e.g. for 2018, the financial year is from 1 July 2018 to 30 June 2019
-    let profits_year = holding.profits.get(financial_year);
-    if (profits_year == null) {
-        profits_year = [];
-        holding.profits.set(financial_year, profits_year);
-    }
+    let profits_year = this.get_holding_profits_year(holding, financial_year);
     profits_year.push(profit);
 
     holding.profit += profit_num;
@@ -231,6 +236,7 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
         }
 
         transactions.push(transaction);
+        trade_value.transactions.push(transaction);
 
         if (transaction.type == "buy") {
             trade_value.buy += transaction.total;
@@ -278,6 +284,27 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
             //     holding.average_close = 0;
             // }
         }
+        else if (transaction.type == "merged") {
+            // same date / same timeframe trades
+            let profit = new models.Profit();
+            profit.year_init = transaction.date;
+            profit.year_close = transaction.date;
+            profit.quantity = transaction.quantity;
+            profit.cost = transaction.value;
+            profit.profit = -transaction.total;
+            profit.close_price = transaction.price;
+            profit.transactions.push(transaction);
+
+            holding.profit += profit.profit;
+            let profits_year = this.get_holding_profits_year(holding, financial_year);
+            profits_year.push(profit);
+        }
+        // else if (transaction.type == "dividends") {
+        // }
+        // else if (transaction.type == "deposit") {
+        // }
+        // else if (transaction.type == "withdraw") {
+        // }
         else {
             console.error("Unknown transaction type: " + transaction.type);
             process.exit(1);

@@ -37,7 +37,87 @@ symbols_array.forEach(function ([symbol, transactions]) {
     // let transactions = trades.symbols.get(symbol);
     transactions.sort(transaction_sort);
 
-    broker.update_holding(portfolio, symbol, transactions);
+    // need to merge transactions if they have the exact same date and time
+    // this could happen when the transaction records are exported from CommSec
+    // they only have date, not time
+    let merged_transactions = [];
+    let last_transaction = transactions[0];
+    merged_transactions.push(last_transaction);
+
+    for (let i = 1; i < transactions.length; i++) {
+        
+        let transaction = transactions[i];
+
+        if (last_transaction.date.getTime() == transaction.date.getTime()) {
+
+            function merge_transaction(new_transaction, transaction) {
+                if (transaction.type == "buy") {
+                    new_transaction.quantity += transaction.quantity;
+                    new_transaction.price += transaction.price;
+                    new_transaction.total += transaction.total;
+                }
+                else if (transaction.type == "sell") {
+                    new_transaction.quantity -= transaction.quantity;
+                    new_transaction.price -= transaction.price;
+                    new_transaction.total -= transaction.total;
+                }
+                new_transaction.value += transaction.value;
+                new_transaction.fee += transaction.fee;
+                new_transaction.gst += transaction.gst;
+            }
+
+            if (last_transaction.type == "merged") {
+                // merge_transaction(last_transaction, transaction);
+                // not to worried, it has been merged already
+                merged_transactions.push(transaction);
+                last_transaction = transaction;
+            }
+            else {
+                // remove the last_transaction
+                merged_transactions.pop();
+
+                let new_transaction = new models.Transaction();
+                new_transaction.date = last_transaction.date;
+                new_transaction.company = last_transaction.company;
+                new_transaction.symbol = last_transaction.symbol;
+                new_transaction.description = last_transaction.description;
+                new_transaction.category = last_transaction.category;
+
+                new_transaction.type = "merged";
+                new_transaction.id = last_transaction.id;
+                merge_transaction(new_transaction, last_transaction);
+                merge_transaction(new_transaction, transaction);
+                merge_transaction.count = last_transaction.count + transaction.count;
+
+                last_transaction = new_transaction;
+
+                merged_transactions.push(new_transaction);
+            }
+
+            if (last_transaction.quantity != 0) {
+                last_transaction.total = Math.abs(last_transaction.total);
+                last_transaction.value = Math.abs(last_transaction.value);
+
+                //
+                if (last_transaction.quantity > 0) {
+                    // buy
+                    last_transaction.type = "buy";
+                }
+                else {
+                    // sell
+                    last_transaction.type = "sell";
+                }
+                last_transaction.quantity = Math.abs(last_transaction.quantity);
+            }
+
+        }
+        else {
+            merged_transactions.push(transaction);
+            last_transaction = transaction;
+        }
+    }
+
+    broker.update_holding(portfolio, symbol, merged_transactions);
 });
 
 console.log("Total symbols traded: " + trades.symbols.size);
@@ -62,10 +142,14 @@ portfolio.holdings.forEach(function (holding) {
 });
 console.log("==============================");
 years_array.forEach(function (year) {
+    let financial_year_pl = broker.calculate_financial_year_profit(portfolio, year);
+
+    if (financial_year_pl.total_trades == 0) {
+        return;
+    }
+
     console.log("==============================");
     console.log("Computing profit / loss for financial year: " + year);
-
-    let financial_year_pl = broker.calculate_financial_year_profit(portfolio, year);
 
     console.log("Total profit / loss: " + financial_year_pl.profit);
     console.log("Total cost: " + financial_year_pl.total_cost);
