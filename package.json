@@ -1,5 +1,5 @@
 {
-  "name": "shares-profit-loss-tax",
+  "name": "sprolosta",
   "version": "1.0.0",
   "description": "A nodejs app that computes the profit / loss of stock trading for each financial year",
   "main": "index.js",
@@ -18,7 +18,11 @@
     "Profit",
     "Loss",
     "CSV",
-    "statements"
+    "statements",
+    "Capital",
+    "Gains",
+    "CGT",
+    "Tax Return"
   ],
   "author": "Eric Tang",
   "license": "MIT",

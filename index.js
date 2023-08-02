@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) 2023 TYO Lab (TYONLINE TECHNOLOGY PTY. LTD.). All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for full license information.
+ */
+
 const Params = require('node-programmer/params');
 const brokers = require('./brokers');
 const models = require('./lib/models');
@@ -45,11 +50,17 @@ let years_array = opts.year > -1 ? [opts.year] : Array.from(trades.years);
 
 
 years_array.sort();
+years_array.unshift(years_array[0] - 1);
 
-
-
-// we may need to go back to the previous year to get the opening trade
-
+// Now show the current portfolio
+console.log("==============================");
+console.log("Current portfolio:");
+portfolio.holdings.forEach(function (holding) {
+    if (holding.quantity > 0) {
+        console.log(holding.company + "(" + holding.symbol + "): " + holding.quantity + " @ " + holding.average_price);
+    }
+});
+console.log("==============================");
 years_array.forEach(function (year) {
     console.log("Computing profit / loss for financial year: " + year);
 

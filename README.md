@@ -1,5 +1,7 @@
 # shares-profit-loss-tax
-A nodejs app that computes the profit / loss of stock trading for each financial year
+Shares PROfit / LOSs TAx (SPROLOSTA or sprolosta) is a profit / loss calculator for stock trading in Australia.
+
+It is coded in nodejs and can be used for computeing the profit / loss of stock trading for each financial year. And the profit for any assets that are held more than 12 months is entitled to a 50% discount.
 
 ## Australian Taxation Office (ATO) rules
 The ATO rules for calculating the profit / loss of stock trading are as follows:
@@ -9,9 +11,25 @@ The ATO rules for calculating the profit / loss of stock trading are as follows:
 
 Any assets hold more than 12 months are entitled to a 50% discount on the profit / loss.
 
+## Installation and Usage
+
+```bash
+npm install -g sprolosta
+```
+
 ## Disclaimer
 
-Please note that this is a personal project and is not intended to be used for any commercial purposes. The author of this project is not responsible for any loss or damage caused by the use of this project.
+- The author of this project is not responsible for any loss or damage caused by the use of this project.
 
-Always consult a professional tax accountant for your tax matters.
+- Always consult a professional tax accountant for your tax matters.
+
+## Donation
+If you find this project useful, please consider donating to the author.
+
+Bitcoin: TSvSd6BMhVYKWJWainRvtzaDH6usPBYW4p
+
+## Maintainer
+
+[Eric Tang](https://twitter.com/_e_tang) @ [TYO Lab](http://tyo.com.au)
+
 

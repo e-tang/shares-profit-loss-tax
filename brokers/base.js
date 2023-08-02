@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2023 TYO Lab (TYONLINE TECHNOLOGY PTY. LTD.). All rights reserved.
+ * Licensed under the MIT License. See LICENSE file in the project root for full license information.
+ */
+
+const models = require("../lib/models");
+
 function Broker () {
     this.name = "general";
     this.shortsell_allowed = false;
@@ -50,7 +57,7 @@ Broker.prototype.calculate_profit = function (holding, transaction, transactions
     profit.cost = cost;
     profit.cost_price = holding.average_price;
     profit.close_price = transaction.price;
-    profit.profit_price = close_price - cost_price;
+    profit.profit_price = profit.close_price - profit.cost_price; // profit per share
     profit.profit = profit_num;
 
     profit.transactions.push(transaction);
@@ -59,6 +66,8 @@ Broker.prototype.calculate_profit = function (holding, transaction, transactions
     let acquired_quantity = 0;
 
     let last_transaction = null;
+    transactions.pop(); // remove the last transaction, which is the current transaction
+
     while((last_transaction = transactions.pop()) != null) {
         profit.transactions.unshift(last_transaction);
 
@@ -93,8 +102,9 @@ Broker.prototype.calculate_profit = function (holding, transaction, transactions
             if (acquired_quantity > transaction.quantity) {
                 // the last transaction is not fully used
                 // so we need to put it back to the stack
-                last_transaction.quantity = acquired_quantity - transaction.quantity;
-                transactions.push(last_transaction);
+                let adjusted_transaction = last_transaction.copy();
+                adjusted_transaction.quantity = acquired_quantity - transaction.quantity;
+                transactions.push(adjusted_transaction);
             }
             break;
         }
@@ -102,10 +112,13 @@ Broker.prototype.calculate_profit = function (holding, transaction, transactions
     }
 
     // now decide which financial year the transaction belongs to
+    // for any given year, the financial year is from 1 July of previous year to 30 June of current year
+    // e.g. for 2018, the financial year is from 1 July 2018 to 30 June 2019
     let year = transaction.date.getFullYear();
-    let start = new Date(year, 6, 1);
-    // let end = new Date(year + 1, 5, 30);
-    let financial_year = (transaction.date >= start) ? year : year - 1;
+    // let start = new Date(year, 6, 1);
+    let start = new Date(year - 1, 6, 1);
+    let end = new Date(year, 5, 30);
+    let financial_year = (transaction.date >= start && transaction.date <= end) ? year - 1 : year;
     let profits_year = holding.profits.get(financial_year);
     if (profits_year == null) {
         profits_year = [];
@@ -134,51 +147,60 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
     // Update portfolio
     let holding = null;
     // let symbol = trades[0].symbol;
-    if (portfolio.holdings.has(transaction.symbol)) {
-        holding = portfolio.holdings.get(transaction.symbol);
-    }
-    else {
-        holding = new models.Holding();
-        holding.symbol = transaction.symbol;
-        holding.company = transaction.company;
-        portfolio.holdings.set(transaction.symbol, holding);
+    if (portfolio.holdings.has(symbol)) {
+        holding = portfolio.holdings.get(symbol);
     }
 
     let last_transaction = null;
-    let last_trade_index = -1;
+
     for (let i = 0; i < trades.length; i++)
     {
         let transaction = trades[i];
         transactions.push(transaction);
 
+        if (!holding) {
+            // new holding
+            holding = new models.Holding();
+            holding.symbol = symbol;
+            holding.company = transaction.company;
+            portfolio.holdings.set(symbol, holding);
+        }
+
         if (transaction.type == "buy") {
             if (holding.quantity == 0) {
-                holding.average_price = holding.cost / holding.quantity;
+                holding.average_price = transaction.price; // holding.cost / holding.quantity;
+                holding.cost = transaction.total;    
             }
-            else if (holding.quantity > 0)
+            else if (holding.quantity > 0) {
+                // increase the position
                 holding.average_price = (holding.cost + transaction.total) / (holding.quantity + transaction.quantity);
-            else {
-                // @todo: handle this case
+                holding.cost += transaction.total;    
             }
-            holding.quantity += transaction.quantity;
-            holding.cost += transaction.total;                        
+            else {
+                this.calculate_profit(holding, transaction, transactions);
+            }
+
+            holding.quantity += transaction.quantity;                    
         }
         else if (transaction.type == "sell") {
             if (holding.quantity == 0) {
                 // todo : handle this case
                 // short selling, initialise a new position
+                holding.average_price = transaction.price;
+                holding.cost = transaction.total;    
             }
-            else if (holding.quantity > 0) {
-                this.calculate_profit(holding, transaction, transactions, last_trade_index);
+            else if ( holding.quantity > 0) {
+                this.calculate_profit(holding, transaction, transactions);
+                holding.cost -= transaction.total;
             }
             else {
                 // short selling, increase the position
                 // the profit is the negative of the cost
-                // holding.profit = -holding.cost;
+                holding.average_price = (holding.cost + transaction.total) / Math.abs(holding.quantity - transaction.quantity);
+                holding.cost += transaction.total;
             }
 
             holding.quantity -= transaction.quantity;
-            holding.cost -= transaction.total;
 
             // if (holding.quantity == 0) {
             //     holding.average_price = 0;
