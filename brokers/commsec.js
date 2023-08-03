@@ -95,7 +95,7 @@ CommSec.prototype.load = function (files, offset, options) {
                 // we need to convert the quantity to a positive number
                 // for some brokers they use negative numbers for sell
                 // but to unify the data we will use positive numbers
-                transaction.quantity = Math.abs(parseInt(fields[4]));
+                transaction.quantity = parseInt(fields[4]);
                 transaction.price = parseFloat(fields[5]);
 
                 // value is the trade value

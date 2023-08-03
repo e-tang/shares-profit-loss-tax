@@ -16,7 +16,8 @@ Broker.prototype.load = function (files, offset) {
     throw new Error("Not implemented");
 }
 
-Broker.prototype.calculate_financial_year_profit = function (portfolio, year) {
+Broker.prototype.calculate_financial_year_profit = function (portfolio, year, options) {
+    options = options || {};
     let financial_year = new models.FinancialYear();
     financial_year.year = year;
     let total_profit = 0;
@@ -36,13 +37,24 @@ Broker.prototype.calculate_financial_year_profit = function (portfolio, year) {
         let profits_year = holding.profits.get(year); // the list of profits for the year
 
         if (profits_year) {
+            let sub_discount = 0;
+            let sub_profit = 0;
+            let sub_profit_gain = 0;
+            let sub_profit_loss = 0;
+            let sub_profit_trades = 0;
+            let sub_loss_trades = 0;
+            let sub_trades = 0;
+            let sub_cost = 0;
+
             profits_year.forEach(function (profit) {
-                total_profit += profit.profit;
-                total_discount += profit.profit_for_discount;
-                // total_trades += profit.transactions.length;
+                if (profit.discount_eligible)
+                    sub_discount += profit.profit;
+                else
+                    sub_profit += profit.profit;
+                // sub_trades += profit.transactions.length;
                 if (profit.profit > 0) {
-                    total_profit_gain += profit.profit;
-                    total_profit_trades++;
+                    sub_profit_gain += profit.profit;
+                    sub_profit_trades++;
 
                     if (profit.profit > trade_profit_max.profit) {
                         trade_profit_max.symbol = holding.symbol;
@@ -50,10 +62,11 @@ Broker.prototype.calculate_financial_year_profit = function (portfolio, year) {
                         trade_profit_max.cost_price = profit.cost_price;
                         trade_profit_max.close_price = profit.close_price;
                         trade_profit_max.profit = profit.profit;
+                        trade_profit_max.type = profit.trade_type;
                     }
                 } else {
-                    total_profit_loss += profit.profit;
-                    total_loss_trades++;
+                    sub_profit_loss += profit.profit;
+                    sub_loss_trades++;
 
                     if (profit.profit < trade_loss_max.profit) {
                         trade_loss_max.symbol = holding.symbol;
@@ -61,11 +74,33 @@ Broker.prototype.calculate_financial_year_profit = function (portfolio, year) {
                         trade_loss_max.cost_price = profit.cost_price;
                         trade_loss_max.close_price = profit.close_price;
                         trade_loss_max.profit = profit.profit;
+                        trade_loss_max.type = profit.trade_type;
                     }
                 }
 
-                total_cost += profit.cost;
+                sub_cost += profit.cost;
             });
+
+            total_profit += sub_profit;
+            total_profit_gain += sub_profit_gain;
+            total_profit_loss += sub_profit_loss;
+            total_profit_trades += sub_profit_trades;
+            total_loss_trades += sub_loss_trades;
+            total_discount += sub_discount;
+            total_trades += sub_trades;
+            total_cost += sub_cost;
+
+            if (options.details) {
+                console.log("Year" + year +" details for " + holding.symbol + ":");
+                console.log("Profit: " + sub_profit);
+                console.log("Profit gain: " + sub_profit_gain);
+                console.log("Profit loss: " + sub_profit_loss);
+                console.log("Profit trades: " + sub_profit_trades);
+                console.log("Loss trades: " + sub_loss_trades);
+                console.log("Discount: " + sub_discount);
+                console.log("Trades: " + sub_trades);
+                console.log("Cost: " + sub_cost);
+            }    
         }
 
         let trade_value = holding.trade_values.get(year);
@@ -102,40 +137,76 @@ Broker.prototype.get_holding_profits_year = function (holding, financial_year) {
     return profits_year;
 }
 
-Broker.prototype.calculate_profit = function (holding, transaction, transactions, financial_year) {
+Broker.prototype.calculate_profit = function (holding, transaction, financial_year) {
+    let profits_year = this.get_holding_profits_year(holding, financial_year);
 
-    let profit = new models.Profit();
-
-    /**
-     * maybe there are a few ways to calculate the average price
-     * 1. change the average price
-     * 2. keep the average price
-     */
-    // let left_cost = holding.cost - transaction.total;
-    // holding.average_price = left_cost / holding.quantity;
-
-    let cost = holding.quantity == transaction.quantity ? holding.cost : holding.average_price * transaction.quantity;
-    let profit_num = transaction.total - cost;
-
-    profit.quantity = transaction.quantity;
-    profit.cost = cost;
-    profit.cost_price = holding.average_price;
-    profit.close_price = transaction.price;
-    profit.profit_price = profit.close_price - profit.cost_price; // profit per share
-    profit.profit = profit_num;
-
-    profit.transactions.push(transaction);
-
+    let transactions = holding.records;
+    // transactions.pop(); // remove the last transaction, which is the current transaction
+    let last_transaction = transactions.pop();
     // now we need to decide whether there is discount for the capital gain
+    let acquired_quantity_abs = 0;
     let acquired_quantity = 0;
+    let quantity_target = Math.abs(transaction.quantity);
+    let quantity_balance = quantity_target;
+    let quantity_surplus = 0;
 
-    let last_transaction = null;
-    transactions.pop(); // remove the last transaction, which is the current transaction
+    let profit_all = 0;
+    let cost_all = 0;
 
-    while((last_transaction = transactions.pop()) != null) {
-        profit.transactions.unshift(last_transaction);
+    while(last_transaction) {
+        if (last_transaction.type == transaction.type) {
+            console.error("The last transaction is the same type as the current transaction");
+            console.error("Last transaction: " + JSON.stringify(last_transaction));
+            console.error("Current transaction: " + JSON.stringify(transaction));
+            process.exit(1);
+        }
+        
+        acquired_quantity += (last_transaction.quantity);
+        let quantity_last = Math.abs(last_transaction.quantity);
+        let profit_quantity = 0;
+        let cost = 0;
+        if ((acquired_quantity_abs = Math.abs(acquired_quantity)) <= quantity_target) {
+            profit_quantity = quantity_last;
+            quantity_balance = quantity_target - acquired_quantity_abs;
+            // there are a couple of ways to calculate the cost
+            // using the average price
+            // using the last transaction total
+            // cost = last_transaction.total;
+        }
+        else {
+            profit_quantity = quantity_balance;
+            quantity_balance = 0;
+        }
+        cost = /* (quantity_last <= profit_quantity ? last_transaction.value : */ ((holding.average_price * profit_quantity)) + last_transaction.fee;
+        cost_all += cost;
 
-        acquired_quantity += last_transaction.quantity;
+        let profit = new models.Profit();
+
+        /**
+         * maybe there are a few ways to calculate the average price
+         * 1. change the average price
+         * 2. keep the average price
+         */
+        // let left_cost = holding.cost - transaction.total;
+        // holding.average_price = left_cost / holding.quantity;
+    
+        // let cost = holding.quantity == quantity_target ? holding.cost : holding.average_price * transaction.quantity;
+        let total = transaction.price * profit_quantity;
+        let profit_num = last_transaction.quantity > 0 ? (total - cost) : (cost - total);
+        profit_all += profit_num;
+    
+        profit.quantity = profit_quantity;
+        profit.cost = cost;
+        profit.cost_price = holding.average_price;
+        profit.close_price = transaction.price;
+        profit.profit_price = profit.close_price - profit.cost_price; // profit per share
+        profit.profit = profit_num;
+        profit.transaction_open = last_transaction;
+        profit.transaction_close = transaction;
+        profit.trade_type = last_transaction.type;
+    
+        // profit.transactions.unshift(last_transaction);
+        profits_year.push(profit);
 
         // now check if the asset hold more than 12 months
         // if so, then there is discount for the capital gain
@@ -153,48 +224,66 @@ Broker.prototype.calculate_profit = function (holding, transaction, transactions
                     if (day < close_day) {
                         // the asset is hold more than 12 months
                         profit.discount_eligible = true;
-                        profit.discount_quantity += last_transaction.quantity;
+                        // profit.discount_quantity += last_transaction.quantity;
                     }
                 }
             }
         }
 
-        if (acquired_quantity >= transaction.quantity) {
+        if (acquired_quantity_abs >= quantity_target) {
             profit.year_init = last_transaction.date;
             profit.year_close = transaction.date;
 
             let year1 = utils.get_financial_year(last_transaction.date);
             let year2 = utils.get_financial_year(transaction.date);
             if (year1 != year2) {
-                console.log("Close trade that spans over 2 financial years");
-                console.log("Symbol: " + transaction.symbol);
-                console.log("Trade 1: " + last_transaction.date.toISOString() + " " + last_transaction.type + " " + last_transaction.quantity);
-                console.log("Trade 2: " + transaction.date.toISOString() + " " + transaction.type + " " + transaction.quantity);
+                console.debug("Close trade that spans over 2 financial years");
+                console.debug("Symbol: " + transaction.symbol);
+                console.debug("Trade 1: " + last_transaction.date.toISOString() + " " + last_transaction.type + " " + last_transaction.quantity);
+                console.debug("Trade 2: " + transaction.date.toISOString() + " " + transaction.type + " " + quantity_target);
             }
 
-            if (acquired_quantity > transaction.quantity) {
-                // the last transaction is not fully used
-                // so we need to put it back to the stack
-                let adjusted_transaction = last_transaction.copy();
-                adjusted_transaction.quantity = acquired_quantity - transaction.quantity;
-                transactions.push(adjusted_transaction);
-            }
+            // if (acquired_quantity_abs > quantity_target) {
+            //     // the last transaction is not fully used
+            //     // so we need to put it back to the stack
+            //     let adjusted_transaction = last_transaction.copy();
+            //     adjusted_transaction.quantity = acquired_quantity - quantity_target;
+            //     transactions.push(adjusted_transaction);
+            // }
             break;
         }
 
+        last_transaction = transactions.pop();
     }
 
-    let profits_year = this.get_holding_profits_year(holding, financial_year);
-    profits_year.push(profit);
+    if (acquired_quantity_abs < quantity_target) {
+        // we didn't acquire enough quantity so this becomes opening a new position in the opposition direction 
+        // there is surplus, need to put it back to the transactions / holding
+        let quantity_surplus = transaction.quantity + acquired_quantity;
+        // holding.quantity += quantity_surplus;
+        // holding.cost += transaction.total - ;
+        // holding.average_price = transaction.price; // holding.cost / holding.quantity;
+        transaction.quantity = quantity_surplus;
+        transaction.value = transaction.price * quantity_surplus;
+        transaction.total = (transaction.quantity > 0) ? transaction.value + transaction.fee : transaction.value - transaction.fee;
+        transactions.push(transaction);
+    }
+    else if (acquired_quantity_abs > quantity_target) {
+        // position partially closed
+        if (!last_transaction) {
+            console.error("No last transaction");
+            process.exit(1);
+        }
+        // keep the average price
+        // holding.average_price = last_transaction.price;
 
-    holding.profit += profit_num;
-
-    if (holding.average_close == 0)
-        holding.average_close = transaction.price;
-    else
-        holding.average_close = (holding.average_close + transaction.price) / 2;
-
-    // return profit;
+        last_transaction.quantity = acquired_quantity + transaction.quantity;
+        last_transaction.fee = 0; // it is already included in the profit
+        last_transaction.value = last_transaction.total = holding.average_price * last_transaction.quantity;
+        transactions.push(last_transaction);
+    }
+    holding.average_close = holding.average_close == 0 ? transaction.price : (holding.average_close + transaction.price) / 2;
+    holding.profit += (profit_all /* - transaction.fee */);
 }
 
 Broker.prototype.update_holding = function (portfolio, symbol, trades) {
@@ -203,7 +292,7 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
         return;
     }
 
-    let transactions = [];
+    // let transactions = [];
 
     // Update portfolio
     let holding = null;
@@ -211,8 +300,6 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
     if (portfolio.holdings.has(symbol)) {
         holding = portfolio.holdings.get(symbol);
     }
-
-    // let last_transaction = null;
 
     for (let i = 0; i < trades.length; i++)
     {
@@ -235,11 +322,125 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
             holding.trade_values.set(financial_year, trade_value);
         }
 
-        transactions.push(transaction);
-        trade_value.transactions.push(transaction);
+        // if (null != last_transaction && last_transaction.date.getTime() == transaction.date.getTime()) {
 
+
+        //     if (last_transaction.type !== transaction.type) {
+
+        //     }
+        //     else {
+        //         // merge the transactions
+        //     }
+
+        //     function merge_transaction(new_transaction, transaction) {
+        //         if (transaction.type == "buy") {
+        //             new_transaction.quantity += transaction.quantity;
+        //             new_transaction.price += transaction.price;
+        //             new_transaction.total += transaction.total;
+        //         }
+        //         else if (transaction.type == "sell") {
+        //             new_transaction.quantity -= transaction.quantity;
+        //             new_transaction.price -= transaction.price;
+        //             new_transaction.total -= transaction.total;
+        //         }
+        //         new_transaction.value += transaction.value;
+        //         new_transaction.fee += transaction.fee;
+        //         new_transaction.gst += transaction.gst;
+        //     }
+
+        //     if (last_transaction.type == "merged") {
+        //         // merge_transaction(last_transaction, transaction);
+        //         // not to worried, it has been merged already
+        //         merged_transactions.push(transaction);
+        //         last_transaction = transaction;
+        //     }
+        //     else {
+        //         // remove the last_transaction
+        //         merged_transactions.pop();
+
+        //         let new_transaction = new models.Transaction();
+        //         new_transaction.date = last_transaction.date;
+        //         new_transaction.company = last_transaction.company;
+        //         new_transaction.symbol = last_transaction.symbol;
+        //         new_transaction.description = last_transaction.description;
+        //         new_transaction.category = last_transaction.category;
+
+        //         new_transaction.type = "merged";
+        //         new_transaction.id = last_transaction.id;
+        //         merge_transaction(new_transaction, last_transaction);
+        //         merge_transaction(new_transaction, transaction);
+        //         merge_transaction.count = last_transaction.count + transaction.count;
+
+        //         last_transaction = new_transaction;
+
+        //         merged_transactions.push(new_transaction);
+        //     }
+
+        //     if (last_transaction.quantity != 0) {
+        //         last_transaction.total = Math.abs(last_transaction.total);
+        //         last_transaction.value = Math.abs(last_transaction.value);
+
+        //         //
+        //         if (last_transaction.quantity > 0) {
+        //             // buy
+        //             last_transaction.type = "buy";
+        //         }
+        //         else {
+        //             // sell
+        //             last_transaction.type = "sell";
+        //         }
+        //         last_transaction.quantity = Math.abs(last_transaction.quantity);
+        //     }
+        // }
+
+        // transactions.push(transaction);
+        trade_value.transactions.push(transaction);
         if (transaction.type == "buy") {
             trade_value.buy += transaction.total;
+        }
+        else if (transaction.type == "sell") {
+            trade_value.sell += transaction.total;
+        }
+        // else if (transaction.type == "dividends") {
+        // }
+        // else if (transaction.type == "deposit") {
+        // }
+        // else if (transaction.type == "withdraw") {
+        // }
+        else {
+            console.error("Unknown transaction type: " + transaction.type);
+            process.exit(1);
+        }
+
+        let quantity = transaction.quantity;
+        if (quantity != 0) {
+            if ((holding.quantity > 0 && quantity < 0) || 
+                (holding.quantity < 0 && quantity > 0)) {
+                // close the position fully or partially
+                this.calculate_profit(holding, transaction, financial_year);
+            }
+            else {
+                // just update the position
+                if (holding.quantity == 0) {
+                    holding.average_price = transaction.price; // holding.cost / holding.quantity;
+                    holding.cost = transaction.total;    
+                }
+                else {
+                    holding.average_price = (holding.cost + transaction.total) / Math.abs(holding.quantity + quantity);
+                    holding.cost += transaction.total;
+                }
+
+                holding.records.push(transaction);
+            }
+
+            holding.quantity += quantity;
+        }
+
+        /*
+        if (transaction.type == "buy") {
+            trade_value.buy += transaction.total;
+            holding.quantity += transaction.quantity;  
+            holding.value += transaction.value;   
 
             if (holding.quantity == 0) {
                 holding.average_price = transaction.price; // holding.cost / holding.quantity;
@@ -254,7 +455,8 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
                 this.calculate_profit(holding, transaction, transactions, financial_year);
             }
 
-            holding.quantity += transaction.quantity;                    
+            holding.quantity += transaction.quantity;  
+            holding.value += transaction.value;                  
         }
         else if (transaction.type == "sell") {
             trade_value.sell += transaction.total;
@@ -277,7 +479,7 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
             }
 
             holding.quantity -= transaction.quantity;
-
+            holding.value -= transaction.value;
             // if (holding.quantity == 0) {
             //     holding.average_price = 0;
             //     holding.cost = 0;
@@ -299,18 +501,7 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
             let profits_year = this.get_holding_profits_year(holding, financial_year);
             profits_year.push(profit);
         }
-        // else if (transaction.type == "dividends") {
-        // }
-        // else if (transaction.type == "deposit") {
-        // }
-        // else if (transaction.type == "withdraw") {
-        // }
-        else {
-            console.error("Unknown transaction type: " + transaction.type);
-            process.exit(1);
-        }
-
-        last_transaction = transaction;
+        */
     }
 }
 
