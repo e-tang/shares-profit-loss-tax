@@ -286,9 +286,13 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
         // holding.average_price = last_transaction.price;
 
         last_transaction.quantity = acquired_quantity + transaction.quantity;
-        last_transaction.fee = 0; // it is already included in the profit
-        last_transaction.value = last_transaction.total = holding.average_price * last_transaction.quantity;
+        // last_transaction.fee = 0; // it is already included in the profit
+        last_transaction.value = last_transaction.price * last_transaction.quantity;
+        last_transaction.total = holding.average_price * last_transaction.quantity;
         transactions.push(last_transaction);
+    }
+    else {
+        // position fully closed
     }
     holding.average_close = holding.average_close == 0 ? transaction.price : (holding.average_close + transaction.price) / 2;
     holding.profit += (profit_all /* - transaction.fee */);
@@ -422,6 +426,8 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
         }
 
         let quantity = transaction.quantity;
+        let transaction_value = transaction.value;
+        let transaction_cost = transaction.total;
         if (quantity != 0) {
             if ((holding.quantity > 0 && quantity < 0) || 
                 (holding.quantity < 0 && quantity > 0)) {
@@ -432,10 +438,10 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
             else {
                 // just update the position
                 if (holding.quantity == 0) {
-                    holding.average_price = transaction.total / quantity; // holding.cost / holding.quantity;
+                    holding.average_price = transaction_cost / quantity; // holding.cost / holding.quantity;
                 }
                 else {
-                    holding.average_price = (holding.cost + transaction.total) / (holding.quantity + quantity);
+                    holding.average_price = (holding.cost + transaction_cost) / (holding.quantity + quantity);
                 }
                 if (holding.average_price < 0) {
                     console.error("Average price is negative: " + holding.average_price);
@@ -446,15 +452,16 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
             }
             holding.quantity += quantity;
 
-            if (holding.quantity == 0) {
+            if (holding.quantity == 0) 
+            {
                 // close the position
                 // profit loss recorded, cost and value reset
                 holding.cost = 0;
                 holding.value = 0;
             }
             else {
-                holding.cost += transaction.total;    
-                holding.value += transaction.value;
+                holding.cost += transaction_cost; // transaction.total;    
+                holding.value += transaction_value; // transaction.value;
             }
         }
     }
