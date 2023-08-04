@@ -148,10 +148,11 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
     let acquired_quantity = 0;
     let quantity_target = Math.abs(transaction.quantity);
     let quantity_balance = quantity_target;
-    let quantity_surplus = 0;
+    // let quantity_surplus = 0;
 
     let profit_all = 0;
     let cost_all = 0;
+    // let fee_absorbed = false;
 
     while(last_transaction) {
         if (last_transaction.type == transaction.type) {
@@ -177,7 +178,8 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
             profit_quantity = quantity_balance;
             quantity_balance = 0;
         }
-        cost = /* (quantity_last <= profit_quantity ? last_transaction.value : */ ((holding.average_price * profit_quantity)) + last_transaction.fee;
+        // fees are absorbed in the average price
+        cost = /* (quantity_last <= profit_quantity ? last_transaction.value : */ ((holding.average_price * profit_quantity))/*  + last_transaction.fee */;
         cost_all += cost;
 
         let profit = new models.Profit();
@@ -193,6 +195,12 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
         // let cost = holding.quantity == quantity_target ? holding.cost : holding.average_price * transaction.quantity;
         let total = transaction.price * profit_quantity;
         let profit_num = last_transaction.quantity > 0 ? (total - cost) : (cost - total);
+        // if (fee_absorbed == false) {
+        //     // if there are multiple transactions, then only the last transaction will absorb the fee
+        //     profit_num -= transaction.fee;
+        //     fee_absorbed = true;
+        // }
+
         profit_all += profit_num;
     
         profit.quantity = profit_quantity;
@@ -265,7 +273,7 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
         // holding.average_price = transaction.price; // holding.cost / holding.quantity;
         transaction.quantity = quantity_surplus;
         transaction.value = transaction.price * quantity_surplus;
-        transaction.total = (transaction.quantity > 0) ? transaction.value + transaction.fee : transaction.value - transaction.fee;
+        transaction.total = transaction.value + transaction.fee;
         transactions.push(transaction);
     }
     else if (acquired_quantity_abs > quantity_target) {
@@ -284,6 +292,7 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
     }
     holding.average_close = holding.average_close == 0 ? transaction.price : (holding.average_close + transaction.price) / 2;
     holding.profit += (profit_all /* - transaction.fee */);
+    return profit_all;
 }
 
 Broker.prototype.update_holding = function (portfolio, symbol, trades) {
@@ -417,91 +426,37 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
             if ((holding.quantity > 0 && quantity < 0) || 
                 (holding.quantity < 0 && quantity > 0)) {
                 // close the position fully or partially
-                this.calculate_profit(holding, transaction, financial_year);
+                let profit = this.calculate_profit(holding, transaction, financial_year);
+                console.debug("Profit: " + profit);
             }
             else {
                 // just update the position
                 if (holding.quantity == 0) {
-                    holding.average_price = transaction.price; // holding.cost / holding.quantity;
-                    holding.cost = transaction.total;    
+                    holding.average_price = transaction.total / quantity; // holding.cost / holding.quantity;
                 }
                 else {
-                    holding.average_price = (holding.cost + transaction.total) / Math.abs(holding.quantity + quantity);
-                    holding.cost += transaction.total;
+                    holding.average_price = (holding.cost + transaction.total) / (holding.quantity + quantity);
+                }
+                if (holding.average_price < 0) {
+                    console.error("Average price is negative: " + holding.average_price);
+                    process.exit(1);
                 }
 
                 holding.records.push(transaction);
             }
-
             holding.quantity += quantity;
-        }
-
-        /*
-        if (transaction.type == "buy") {
-            trade_value.buy += transaction.total;
-            holding.quantity += transaction.quantity;  
-            holding.value += transaction.value;   
 
             if (holding.quantity == 0) {
-                holding.average_price = transaction.price; // holding.cost / holding.quantity;
-                holding.cost = transaction.total;    
+                // close the position
+                // profit loss recorded, cost and value reset
+                holding.cost = 0;
+                holding.value = 0;
             }
-            else if (holding.quantity > 0) {
-                // increase the position
-                holding.average_price = (holding.cost + transaction.total) / (holding.quantity + transaction.quantity);
+            else {
                 holding.cost += transaction.total;    
+                holding.value += transaction.value;
             }
-            else {
-                this.calculate_profit(holding, transaction, transactions, financial_year);
-            }
-
-            holding.quantity += transaction.quantity;  
-            holding.value += transaction.value;                  
         }
-        else if (transaction.type == "sell") {
-            trade_value.sell += transaction.total;
-
-            if (holding.quantity == 0) {
-                // todo : handle this case
-                // short selling, initialise a new position
-                holding.average_price = transaction.price;
-                holding.cost = transaction.total;    
-            }
-            else if ( holding.quantity > 0) {
-                this.calculate_profit(holding, transaction, transactions, financial_year);
-                holding.cost -= transaction.total;
-            }
-            else {
-                // short selling, increase the position
-                // the profit is the negative of the cost
-                holding.average_price = (holding.cost + transaction.total) / Math.abs(holding.quantity - transaction.quantity);
-                holding.cost += transaction.total;
-            }
-
-            holding.quantity -= transaction.quantity;
-            holding.value -= transaction.value;
-            // if (holding.quantity == 0) {
-            //     holding.average_price = 0;
-            //     holding.cost = 0;
-            //     holding.average_close = 0;
-            // }
-        }
-        else if (transaction.type == "merged") {
-            // same date / same timeframe trades
-            let profit = new models.Profit();
-            profit.year_init = transaction.date;
-            profit.year_close = transaction.date;
-            profit.quantity = transaction.quantity;
-            profit.cost = transaction.value;
-            profit.profit = -transaction.total;
-            profit.close_price = transaction.price;
-            profit.transactions.push(transaction);
-
-            holding.profit += profit.profit;
-            let profits_year = this.get_holding_profits_year(holding, financial_year);
-            profits_year.push(profit);
-        }
-        */
     }
 }
 

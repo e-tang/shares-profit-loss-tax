@@ -100,7 +100,7 @@ CommSec.prototype.load = function (files, offset, options) {
 
                 // value is the trade value
                 // could be negative for sell
-                transaction.value = Math.abs(parseFloat(fields[6]));
+                transaction.value = parseFloat(fields[6]);
                 transaction.fee = parseFloat(fields[7]);
                 transaction.gst = parseFloat(fields[8]);
                 transaction.note = fields[9];
@@ -108,7 +108,7 @@ CommSec.prototype.load = function (files, offset, options) {
                 // the settlement amount
                 // if it is a sell, it is a negative value with fee taken out
                 // e.g. value = -999, fee = 10, total = -989
-                transaction.total = Math.abs(parseFloat(fields[10]));
+                transaction.total = parseFloat(fields[10]);
 
                 if (trades.first == null || trades.first > transaction.date) {
                     trades.first = transaction.date;
