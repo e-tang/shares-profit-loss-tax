@@ -10,6 +10,7 @@ function Broker () {
     this.name = "general";
     this.shortsell_allowed = false;
     this.missing_trades = new Map();
+    this.minimum_commas_count = 5; // 6 columns at least
 }
 
 Broker.prototype.load = function (files, offset) {
@@ -335,78 +336,6 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
             holding.trade_values.set(financial_year, trade_value);
         }
 
-        // if (null != last_transaction && last_transaction.date.getTime() == transaction.date.getTime()) {
-
-
-        //     if (last_transaction.type !== transaction.type) {
-
-        //     }
-        //     else {
-        //         // merge the transactions
-        //     }
-
-        //     function merge_transaction(new_transaction, transaction) {
-        //         if (transaction.type == "buy") {
-        //             new_transaction.quantity += transaction.quantity;
-        //             new_transaction.price += transaction.price;
-        //             new_transaction.total += transaction.total;
-        //         }
-        //         else if (transaction.type == "sell") {
-        //             new_transaction.quantity -= transaction.quantity;
-        //             new_transaction.price -= transaction.price;
-        //             new_transaction.total -= transaction.total;
-        //         }
-        //         new_transaction.value += transaction.value;
-        //         new_transaction.fee += transaction.fee;
-        //         new_transaction.gst += transaction.gst;
-        //     }
-
-        //     if (last_transaction.type == "merged") {
-        //         // merge_transaction(last_transaction, transaction);
-        //         // not to worried, it has been merged already
-        //         merged_transactions.push(transaction);
-        //         last_transaction = transaction;
-        //     }
-        //     else {
-        //         // remove the last_transaction
-        //         merged_transactions.pop();
-
-        //         let new_transaction = new models.Transaction();
-        //         new_transaction.date = last_transaction.date;
-        //         new_transaction.company = last_transaction.company;
-        //         new_transaction.symbol = last_transaction.symbol;
-        //         new_transaction.description = last_transaction.description;
-        //         new_transaction.category = last_transaction.category;
-
-        //         new_transaction.type = "merged";
-        //         new_transaction.id = last_transaction.id;
-        //         merge_transaction(new_transaction, last_transaction);
-        //         merge_transaction(new_transaction, transaction);
-        //         merge_transaction.count = last_transaction.count + transaction.count;
-
-        //         last_transaction = new_transaction;
-
-        //         merged_transactions.push(new_transaction);
-        //     }
-
-        //     if (last_transaction.quantity != 0) {
-        //         last_transaction.total = Math.abs(last_transaction.total);
-        //         last_transaction.value = Math.abs(last_transaction.value);
-
-        //         //
-        //         if (last_transaction.quantity > 0) {
-        //             // buy
-        //             last_transaction.type = "buy";
-        //         }
-        //         else {
-        //             // sell
-        //             last_transaction.type = "sell";
-        //         }
-        //         last_transaction.quantity = Math.abs(last_transaction.quantity);
-        //     }
-        // }
-
-        // transactions.push(transaction);
         trade_value.transactions.push(transaction);
         if (transaction.type == "buy") {
             trade_value.buy += transaction.total;
@@ -465,6 +394,110 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
             }
         }
     }
+}
+
+/**
+ * When this happens the line is normally the header line
+ * 
+ * @param {*} line 
+ * @returns 
+ */
+Broker.prototype.is_data_line_started = function (line) {
+    var count = (temp.match(/,/g) || []).length;
+    var quote_count = (temp.match(/"/g) || []).length;
+    /**
+     * as we need 
+     * symbol, date, type, quantity, price and total at least
+     * so we need at least 6 commas
+     */
+    return (count > this.minimum_columns_count && quote_count > (this.minimum_columns_count * 2) && quote_count % 2 == 0);
+}
+
+Broker.prototype.is_data_line_ended = function (line) {
+    return line.trim().length == 0;
+}
+
+Broker.prototype.line_to_transaction = function (fields) {
+    throw new Error("Func (line_to_transaction) is Not implemented");
+}
+
+/**
+ * Load the broker's data from the CSV file.
+ */
+Broker.prototype.load = function (files, offset, options) {
+    console.log("Loading CommSec data...");
+    if (!options && typeof offset == 'object') {
+        options = offset;
+        offset = 0;
+    }
+
+    offset = offset || 0;
+    options = options || {};
+
+    let trades = new models.Trades();
+
+    if (!Array.isArray(files)) {
+        files = [files];
+    }
+
+    let count = 0;
+    for (let i = 0; i < files.length; i++) {
+        try {
+            let content = fs.readFileSync(files[i], 'utf8');
+            let lines = content.split('\n');
+            for (let s = 0; s < offset; s++) {
+                lines.shift();
+            }
+            let start = false;
+
+            for (let j = 0; j < lines.length; j++) {
+                let line = lines[j];
+
+                if (!start) {
+                    // for CommSec, the first data line starts with "Code,"
+                    // if (line.startsWith("Code,")) 
+                    if (this.is_data_line_started(line))
+                        start = true;
+                    continue;
+                }
+
+                if (this.is_data_line_ended(line)) {
+                    break;
+                }
+                let fields = line.split(',');
+                fields = fields.map(function (field) {
+                    try {
+                        return JSON.parse(field.trim());
+                    }
+                    catch (e) {
+                        // console.log("Error parsing field: " + field);
+                        return field.trim();
+                    }
+                });
+
+                let transaction = this.line_to_transaction(fields, ++count);
+
+                let year = transaction.date.getFullYear();
+                trades.years.add(year);
+                
+                let transactions = null;
+                if (trades.symbols.has(transaction.symbol)) {
+                    transactions = trades.symbols.get(transaction.symbol);
+                }
+                else {
+                    transactions = [];
+                    trades.symbols.set(transaction.symbol, transactions);
+                }
+
+                transactions.push(transaction);
+            }
+        }
+        catch (err) {
+            console.log(err);
+        }
+    }
+
+    return trades;
 }
 
 module.exports = Broker;
