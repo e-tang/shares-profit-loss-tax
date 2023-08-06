@@ -11,5 +11,5 @@ const commsec = new CommSec();
 module.exports = {
     commsec: commsec,
     default: commsec,
-    fpmarkets: require('./fpmarkets'),
+    fpmarkets: new (require('./fpmarkets'))(),
 }

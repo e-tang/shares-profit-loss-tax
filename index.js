@@ -13,6 +13,7 @@ var params = new Params({
     "portfolio-file": "portfolio.json",
     "year": -1,
     "details": false,
+    "symbol": null,
 });
 
 var opts = params.getOpts();
@@ -33,7 +34,7 @@ function transaction_sort(a, b) {
 
 let portfolio = new models.Portfolio();
 
-let symbols_array = Array.from(trades.symbols);
+let symbols_array = opts.symbol && opts.symbol.length > 0 ? opts.symbol.split(',') : Array.from(trades.symbols);
 symbols_array.forEach(function ([symbol, transactions]) {
     // let transactions = trades.symbols.get(symbol);
     transactions.sort(transaction_sort);
@@ -78,7 +79,7 @@ console.log("==============================");
 console.log("Current portfolio:");
 portfolio.holdings.forEach(function (holding) {
     if (holding.quantity > 0) {
-        console.log(holding.company + "(" + holding.symbol + "): " + holding.quantity + " @ " + holding.average_price);
+        console.log((holding.company || "") + "(" + holding.symbol + "): " + holding.quantity + " @ " + holding.average_price);
     }
 });
 console.log("==============================");

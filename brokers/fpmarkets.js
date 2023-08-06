@@ -15,13 +15,13 @@ const models = require('../lib/models');
 function FPMarkets() {
     Broker.call(this);
 
-    this.name = "CommSec";
+    this.name = "FP Markets";
 }
 
 /**
  * Load the broker's data from the CSV file.
  */
-FPMarkets.prototype.line_to_transaction = function (line, index) {
+FPMarkets.prototype.line_to_transaction = function (fields, index) {
     // ID
     // Date
     // Time
@@ -39,8 +39,10 @@ FPMarkets.prototype.line_to_transaction = function (line, index) {
     let tokens = fields[1].split('/');
     transaction.date = new Date(tokens[2], tokens[1] - 1, tokens[0]);
     try {
-        tokens = fields[2].split(/[:/s]/);
-        transaction.date.setHours(tokens[0]);
+        tokens = fields[2].split(/[:|\s+]/g);
+
+        let hour = parseInt(tokens[0]);
+        transaction.date.setHours(hour);
         transaction.date.setMinutes(tokens[1]);
         transaction.date.setSeconds(tokens[2]);
         if (tokens.length > 3) {
@@ -48,7 +50,6 @@ FPMarkets.prototype.line_to_transaction = function (line, index) {
             if (token[0] >= '0' && token[0] <= '9') 
                 transaction.date.setMilliseconds(tokens[3]);
             else if (token == 'pm') {
-                let hour = 0 + token;
                 if (hour < 12)
                     transaction.date.setHours(hour + 12);
             }
@@ -72,7 +73,8 @@ FPMarkets.prototype.line_to_transaction = function (line, index) {
 
     transaction.quantity = parseInt(fields[8]);
 
-    transaction.price = parseFloat(fields[9]);
+    // in cents
+    transaction.price = parseFloat(fields[9]) / 100;
 
     // total is the trade value as commission is calculated separately 
     transaction.total = transaction.value = parseFloat(fields[10]);

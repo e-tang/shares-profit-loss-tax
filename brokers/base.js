@@ -6,6 +6,8 @@
 const models = require("../lib/models");
 const utils = require("../lib/utils");
 
+const fs = require("fs");
+
 function Broker () {
     this.name = "general";
     this.shortsell_allowed = false;
@@ -396,6 +398,16 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
     }
 }
 
+Broker.prototype.quote_count_check = function (line) {
+    var quote_count = (line.match(/"/g) || []).length;
+    /**
+     * as we need 
+     * symbol, date, type, quantity, price and total at least
+     * so we need at least 6 commas
+     */
+    return quote_count > (this.minimum_commas_count * 2) && (quote_count % 2) == 0;
+}
+
 /**
  * When this happens the line is normally the header line
  * 
@@ -403,14 +415,13 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
  * @returns 
  */
 Broker.prototype.is_data_line_started = function (line) {
-    var count = (temp.match(/,/g) || []).length;
-    var quote_count = (temp.match(/"/g) || []).length;
-    /**
-     * as we need 
-     * symbol, date, type, quantity, price and total at least
-     * so we need at least 6 commas
-     */
-    return (count > this.minimum_columns_count && quote_count > (this.minimum_columns_count * 2) && quote_count % 2 == 0);
+    var count = (line.match(/,/g) || []).length;
+
+    if (count < this.minimum_commas_count) {
+        return false;
+    }
+
+    return this.quote_count_check(line);
 }
 
 Broker.prototype.is_data_line_ended = function (line) {
@@ -419,6 +430,76 @@ Broker.prototype.is_data_line_ended = function (line) {
 
 Broker.prototype.line_to_transaction = function (fields) {
     throw new Error("Func (line_to_transaction) is Not implemented");
+}
+
+Broker.prototype.load_content_common = function (trades, content, options) {
+    let { index, offset } = options;
+    let count = 0;
+
+    let lines = content.split('\n');
+    for (let s = 0; s < offset; s++) {
+        lines.shift();
+    }
+    let start = false;
+
+    for (let j = 0; j < lines.length; j++) {
+        let line = lines[j];
+
+        if (!start) {
+            // for CommSec, the first data line starts with "Code,"
+            // if (line.startsWith("Code,")) 
+            if (this.is_data_line_started(line))
+                start = true;
+            continue;
+        }
+
+        if (this.is_data_line_ended(line)) {
+            break;
+        }
+        let fields = line.split(',');
+        fields = fields.map(function (field) {
+            try {
+                return JSON.parse(field.trim());
+            }
+            catch (e) {
+                // console.log("Error parsing field: " + field);
+                return field.trim();
+            }
+        });
+
+        let transaction = this.line_to_transaction(fields, (++count) + index);
+        if (!transaction) {
+            // not all CVS lines are transactions
+            // e.g. the transaction records downloaded from the CommSec website
+            continue;
+        }
+
+        if (trades.first == null || trades.first > transaction.date) {
+            trades.first = transaction.date;
+        }
+        if (trades.last == null || trades.last < transaction.date) {
+            trades.last = transaction.date;
+        }
+
+        let year = transaction.date.getFullYear();
+        trades.years.add(year);
+        
+        let transactions = null;
+        if (trades.symbols.has(transaction.symbol)) {
+            transactions = trades.symbols.get(transaction.symbol);
+        }
+        else {
+            transactions = [];
+            trades.symbols.set(transaction.symbol, transactions);
+        }
+
+        transactions.push(transaction);
+    }
+    return count;
+}
+
+Broker.prototype.load_content = function (trades, content, options) {
+    return this.load_content_common(trades, content, options);
 }
 
 /**
@@ -439,58 +520,11 @@ Broker.prototype.load = function (files, offset, options) {
     if (!Array.isArray(files)) {
         files = [files];
     }
-
     let count = 0;
     for (let i = 0; i < files.length; i++) {
         try {
             let content = fs.readFileSync(files[i], 'utf8');
-            let lines = content.split('\n');
-            for (let s = 0; s < offset; s++) {
-                lines.shift();
-            }
-            let start = false;
-
-            for (let j = 0; j < lines.length; j++) {
-                let line = lines[j];
-
-                if (!start) {
-                    // for CommSec, the first data line starts with "Code,"
-                    // if (line.startsWith("Code,")) 
-                    if (this.is_data_line_started(line))
-                        start = true;
-                    continue;
-                }
-
-                if (this.is_data_line_ended(line)) {
-                    break;
-                }
-                let fields = line.split(',');
-                fields = fields.map(function (field) {
-                    try {
-                        return JSON.parse(field.trim());
-                    }
-                    catch (e) {
-                        // console.log("Error parsing field: " + field);
-                        return field.trim();
-                    }
-                });
-
-                let transaction = this.line_to_transaction(fields, ++count);
-
-                let year = transaction.date.getFullYear();
-                trades.years.add(year);
-                
-                let transactions = null;
-                if (trades.symbols.has(transaction.symbol)) {
-                    transactions = trades.symbols.get(transaction.symbol);
-                }
-                else {
-                    transactions = [];
-                    trades.symbols.set(transaction.symbol, transactions);
-                }
-
-                transactions.push(transaction);
-            }
+            count += this.load_content(trades, content, { index: count, offset: offset });
         }
         catch (err) {
             console.log(err);
