@@ -1,6 +1,6 @@
 {
   "name": "sprolosta",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A nodejs app that computes the profit / loss of stock trading for each financial year",
   "main": "index.js",
   "scripts": {

@@ -13,6 +13,7 @@ function Broker () {
     this.shortsell_allowed = false;
     this.missing_trades = new Map();
     this.minimum_commas_count = 5; // 6 columns at least
+    this.quote_count_needed = false;
 }
 
 Broker.prototype.load = function (files, offset) {
@@ -371,8 +372,12 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
                 if (holding.quantity == 0) {
                     holding.average_price = transaction_cost / quantity; // holding.cost / holding.quantity;
                 }
-                else {
-                    holding.average_price = (holding.cost + transaction_cost) / (holding.quantity + quantity);
+                else { 
+                    // holding cost will be cumulated with the loss / profit, so we can't use it here 
+                    // when the loss is realised and if the stock gets re-bought, the average price should reflect it
+                    // holding.average_price = (holding.cost + transaction_cost) / (holding.quantity + quantity);
+                    holding.average_price = (holding.average_price * holding.quantity + transaction_cost) / (holding.quantity + quantity);
+                    console.debug("Average price now: " + holding.average_price)
                 }
                 if (holding.average_price < 0) {
                     console.error("Average price is negative: " + holding.average_price);
@@ -399,6 +404,9 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
 }
 
 Broker.prototype.quote_count_check = function (line) {
+    if (!this.quote_count_needed)
+        return true;
+
     var quote_count = (line.match(/"/g) || []).length;
     /**
      * as we need 
@@ -523,6 +531,11 @@ Broker.prototype.load = function (files, offset, options) {
     let count = 0;
     for (let i = 0; i < files.length; i++) {
         try {
+            if (!fs.existsSync(files[i])) {
+                console.error("File not found: " + files[i]);
+                process.exit(1);
+            }
+            console.log("Loading transactions file: " + files[i])
             let content = fs.readFileSync(files[i], 'utf8');
             count += this.load_content(trades, content, { index: count, offset: offset });
         }

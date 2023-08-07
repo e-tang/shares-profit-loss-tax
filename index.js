@@ -34,42 +34,33 @@ function transaction_sort(a, b) {
 
 let portfolio = new models.Portfolio();
 
-let symbols_array = opts.symbol && opts.symbol.length > 0 ? opts.symbol.split(',') : Array.from(trades.symbols);
+let symbols_array = null;
+if (opts.symbol && opts.symbol.length > 0) {
+    symbols_array = [];
+    let symbols = opts.symbol.split(',');
+    symbols.forEach(function (symbol) {
+        let transactions = trades.symbols.get(symbol);
+        if (transactions) {
+            symbols_array.push([symbol, transactions]);
+        }
+    });
+}
+else {
+    symbols_array = Array.from(trades.symbols);
+}
 symbols_array.forEach(function ([symbol, transactions]) {
-    // let transactions = trades.symbols.get(symbol);
+
     transactions.sort(transaction_sort);
-
-    // need to merge transactions if they have the exact same date and time
-    // this could happen when the transaction records are exported from CommSec
-    // they only have date, not time
-    // let merged_transactions = [];
-    // let last_transaction = transactions[0];
-    // merged_transactions.push(last_transaction);
-
-    // for (let i = 1; i < transactions.length; i++) {
-        
-    //     let transaction = transactions[i];
-
-
-
-    //     }
-    //     else {
-    //         merged_transactions.push(transaction);
-    //         last_transaction = transaction;
-    //     }
-    // }
 
     broker.update_holding(portfolio, symbol, transactions);
 });
 
-console.log("Total symbols traded: " + trades.symbols.size);
+console.log("Total symbols traded: " + /* trades.symbols.size */symbols_array.length);
 console.log("First trade: " + trades.first);
 console.log("Last trade: " + trades.last);
 console.log("Years traded: " + trades.years.size);
 
-
 let years_array = opts.year > -1 ? [opts.year] : Array.from(trades.years);
-
 
 years_array.sort();
 years_array.unshift(years_array[0] - 1);

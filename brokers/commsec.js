@@ -34,10 +34,10 @@ CommSec.prototype.quote_count_check = function (line) {
 }
 
 CommSec.prototype.load_content = function (trades, content, options) {
-    if (content.indexOf("Code,") >= 0 && content.indexOf("Transaction Summary") >= 0) {
+    if (content.indexOf("Code,Company,") >= 0/*  && content.indexOf("Transaction Summary") >= 0 */) {
         this.before_2023 = true;
     }
-    else if (content.indexOf("Date,Reference") >= 0) {
+    else if (content.indexOf("Date,Reference,") >= 0) {
         this.before_2023 = false;
     }
     else {

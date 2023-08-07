@@ -16,6 +16,7 @@ function FPMarkets() {
     Broker.call(this);
 
     this.name = "FP Markets";
+    this.quote_count_needed = true;
 }
 
 /**

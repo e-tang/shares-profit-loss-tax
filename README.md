@@ -11,12 +11,24 @@ The ATO rules for calculating the profit / loss of stock trading are as follows:
 
 Any assets hold more than 12 months are entitled to a 50% discount on the profit / loss.
 
+## Supported Brokers
+- CommSec
+- FP Markets
+
+As the author only has accounts with these two brokers, only these two brokers are supported at the moment. However, the author is happy to accept pull requests for other brokers.
+
 ## Installation and Usage
 
+### Installation
+```bash
 ```bash
 npm install -g sprolosta
 ```
 
+### Usage
+```bash
+sprolosta <--broker broker> <csv file>
+```
 ## Disclaimer
 
 - The author of this project is not responsible for any loss or damage caused by the use of this project.
