@@ -14,6 +14,7 @@ var params = new Params({
     "year": -1,
     "details": false,
     "symbol": null,
+    "ignore": [],
 });
 
 var opts = params.getOpts();
@@ -34,6 +35,8 @@ function transaction_sort(a, b) {
 
 let portfolio = new models.Portfolio();
 
+let symbols_to_ignore = new Set(opts.ignore);
+
 let symbols_array = null;
 if (opts.symbol && opts.symbol.length > 0) {
     symbols_array = [];
@@ -49,7 +52,9 @@ else {
     symbols_array = Array.from(trades.symbols);
 }
 symbols_array.forEach(function ([symbol, transactions]) {
-
+    if (symbols_to_ignore.has(symbol))
+        return;
+    
     transactions.sort(transaction_sort);
 
     broker.update_holding(portfolio, symbol, transactions);

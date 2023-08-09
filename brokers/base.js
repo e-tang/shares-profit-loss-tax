@@ -365,7 +365,7 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
                 (holding.quantity < 0 && quantity > 0)) {
                 // close the position fully or partially
                 let profit = this.calculate_profit(holding, transaction, financial_year);
-                console.debug("Profit: " + profit);
+                // console.debug("Profit: " + profit);
             }
             else {
                 // just update the position
@@ -377,7 +377,7 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
                     // when the loss is realised and if the stock gets re-bought, the average price should reflect it
                     // holding.average_price = (holding.cost + transaction_cost) / (holding.quantity + quantity);
                     holding.average_price = (holding.average_price * holding.quantity + transaction_cost) / (holding.quantity + quantity);
-                    console.debug("Average price now: " + holding.average_price)
+                    // console.debug("Average price now: " + holding.average_price)
                 }
                 if (holding.average_price < 0) {
                     console.error("Average price is negative: " + holding.average_price);

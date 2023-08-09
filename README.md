@@ -21,14 +21,46 @@ As the author only has accounts with these two brokers, only these two brokers a
 
 ### Installation
 ```bash
-```bash
 npm install -g sprolosta
 ```
 
 ### Usage
+
+#### Split and Consolidation of Shares
+
+If you have shares that have been split or consolidated, you will need to adjust the transactions manually.
+
 ```bash
-sprolosta <--broker broker> <csv file>
+sprolosta <--broker broker> <--symbol symbol1,symbol2,..> <--ignore symbol1,symbol2> <csv file>
 ```
+
+#### Example 1
+
+```bash
+sprolosta --broker commsec Transactions_2540927_01072022_30062023.csv
+```
+
+#### Example 2 - Multiple CSV Files
+
+```bash
+sprolosta --broker fpmarkets 2020.csv 2021.csv 2022.csv 2023.csv
+
+```
+
+#### Example 3 - Check Only a Few Symbols
+
+```bash
+sprolosta --broker fpmarkets --symbol AKE,MP1,VSR 2020.csv 2021.csv 2022.csv 2023.csv
+
+```
+
+### Example 4 - Ignore a Few Symbols
+
+```bash
+sprolosta --broker fpmarkets --ignore BMN 2020.csv 2021.csv 2022.csv 2023.csv
+
+```
+
 ## Disclaimer
 
 - The author of this project is not responsible for any loss or damage caused by the use of this project.
