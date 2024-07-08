@@ -1,11 +1,17 @@
 /**
- * Copyright (c) 2023 TYO Lab (TYONLINE TECHNOLOGY PTY. LTD.). All rights reserved.
+ * Copyright (c) 2024 TYO Lab (TYONLINE TECHNOLOGY PTY. LTD.). All rights reserved.
  * Licensed under the MIT License. See LICENSE file in the project root for full license information.
  */
 
 const Params = require('node-programmer/params');
 const brokers = require('./brokers');
 const models = require('./lib/models');
+
+/*
+ consolidation or split data
+ at the moment we are assuming the consolidation or split only happens once
+ */
+let app_data = require('./data');
 
 var params = new Params({
     "broker": "default",
@@ -57,7 +63,7 @@ symbols_array.forEach(function ([symbol, transactions]) {
     
     transactions.sort(transaction_sort);
 
-    broker.update_holding(portfolio, symbol, transactions);
+    broker.update_holding(portfolio, symbol, transactions, app_data);
 });
 
 console.log("Total symbols traded: " + /* trades.symbols.size */symbols_array.length);
@@ -70,14 +76,13 @@ let years_array = opts.year > -1 ? [opts.year] : Array.from(trades.years);
 years_array.sort();
 years_array.unshift(years_array[0] - 1);
 
-// Now show the current portfolio
-console.log("==============================");
-console.log("Current portfolio:");
-portfolio.holdings.forEach(function (holding) {
-    if (holding.quantity > 0) {
-        console.log((holding.company || "") + "(" + holding.symbol + "): " + holding.quantity + " @ " + holding.average_price);
-    }
-});
+// console.log("==============================");
+// console.log("Current portfolio:");
+// portfolio.holdings.forEach(function (holding) {
+//     if (holding.quantity > 0) {
+//         console.log((holding.company || "") + "(" + holding.symbol + "): " + holding.quantity + " @ " + holding.average_price);
+//     }
+// });
 console.log("==============================");
 years_array.forEach(function (year) {
     let financial_year_pl = broker.calculate_financial_year_profit(
@@ -92,8 +97,10 @@ years_array.forEach(function (year) {
         return;
     }
 
+    let financial_year_str = year + "-" + (year + 1);
+
     console.log("==============================");
-    console.log("Computing profit / loss for financial year: " + year);
+    console.log("Computing profit / loss for financial year: " + financial_year_str);
 
     // console.log("Should be profit / loss: " + (financial_year_pl.total_buy - financial_year_pl.total_sell));
     console.log("Total profit / loss: " + financial_year_pl.profit);
@@ -111,7 +118,22 @@ years_array.forEach(function (year) {
     console.log();
     console.log("Biggest winning trade: " + financial_year_pl.trade_profit_max.toString());
     console.log("Biggest losing trade: " + financial_year_pl.trade_loss_max.toString());
+    console.log();
+    console.log("At the end of the financial year portfolio (" + financial_year_str + "):");
+
     console.log("==============================");
 });
 
 
+// Now show the current portfolio
+let remaining_cost = 0;
+portfolio.holdings.forEach(function (holding) {
+    if (holding.quantity > 0) {
+        let cost = holding.average_price * holding.quantity;
+        console.log((holding.symbol || "") + ": " /* "(" + holding.company + "): " */ + holding.quantity + "@" + holding.average_price) + ", cost: " + cost;
+        remaining_cost += cost;
+    }
+});
+console.log("Portfolio cost: " + remaining_cost);
+console.log("");
+// console.log("Total buy and sell offset: " + (financial_year_pl.total_buy + financial_year_pl.total_sell));

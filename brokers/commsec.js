@@ -40,6 +40,10 @@ CommSec.prototype.load_content = function (trades, content, options) {
     else if (content.indexOf("Date,Reference,") >= 0) {
         this.before_2023 = false;
     }
+    else if (content.indexOf("No data available") >= 0) {
+        console.error("No data available");
+        return trades;
+    }
     else {
         let lines = content.split('\n');
         for (let i = 0; i < 3; i++) {

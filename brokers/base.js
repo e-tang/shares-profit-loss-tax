@@ -303,7 +303,7 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
     return profit_all;
 }
 
-Broker.prototype.update_holding = function (portfolio, symbol, trades) {
+Broker.prototype.update_holding = function (portfolio, symbol, trades, app_data) {
     if (!trades || trades.length == 0) {
         console.log("No trades to update");
         return;
@@ -321,6 +321,10 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
     for (let i = 0; i < trades.length; i++)
     {
         let transaction = trades[i];
+
+        // debug
+        if (i == 7)
+            console.debug("Debug");
 
         if (!holding) {
             // new holding
@@ -361,13 +365,20 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
         let transaction_value = transaction.value;
         let transaction_cost = transaction.total;
         if (quantity != 0) {
+            let cos = app_data ? app_data.get_cos(symbol, transaction.date) : 1;
+            if (cos != 1) {
+                console.debug(`Instrument (${symbol}) consolidation or split before ${transaction.date.toISOString()}: ${cos}`);
+            }
+
             if ((holding.quantity > 0 && quantity < 0) || 
                 (holding.quantity < 0 && quantity > 0)) {
                 // close the position fully or partially
+                holding.quantity = holding.quantity * cos;
                 let profit = this.calculate_profit(holding, transaction, financial_year);
                 // console.debug("Profit: " + profit);
             }
             else {
+                // increasing the holding (long or short)
                 // just update the position
                 if (holding.quantity == 0) {
                     holding.average_price = transaction_cost / quantity; // holding.cost / holding.quantity;
@@ -376,7 +387,13 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades) {
                     // holding cost will be cumulated with the loss / profit, so we can't use it here 
                     // when the loss is realised and if the stock gets re-bought, the average price should reflect it
                     // holding.average_price = (holding.cost + transaction_cost) / (holding.quantity + quantity);
-                    holding.average_price = (holding.average_price * holding.quantity + transaction_cost) / (holding.quantity + quantity);
+
+                    // since we have existing holding, we need to adjust the average price
+                    // also if there is consolidation or split, the average price will be adjusted
+                    // and the quantity will be adjusted accordingly too
+                    let previous_cost = holding.average_price * holding.quantity;
+                    holding.quantity = holding.quantity * cos;
+                    holding.average_price = (previous_cost + transaction_cost) / (holding.quantity + quantity);
                     // console.debug("Average price now: " + holding.average_price)
                 }
                 if (holding.average_price < 0) {
