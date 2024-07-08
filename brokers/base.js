@@ -322,10 +322,6 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades, app_data)
     {
         let transaction = trades[i];
 
-        // debug
-        if (i == 7)
-            console.debug("Debug");
-
         if (!holding) {
             // new holding
             holding = new models.Holding();
@@ -365,8 +361,11 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades, app_data)
         let transaction_value = transaction.value;
         let transaction_cost = transaction.total;
         if (quantity != 0) {
-            let cos = app_data ? app_data.get_cos(symbol, transaction.date) : 1;
-            if (cos != 1) {
+            let cos_obj = app_data ? app_data.get_cos(symbol, transaction.date, holding.last_cos) : null;
+            let cos = 1;
+            if (cos_obj) {
+                cos = cos_obj.cos;
+                holding.last_cos = cos_obj.date;
                 console.debug(`Instrument (${symbol}) consolidation or split before ${transaction.date.toISOString()}: ${cos}`);
             }
 
@@ -374,6 +373,7 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades, app_data)
                 (holding.quantity < 0 && quantity > 0)) {
                 // close the position fully or partially
                 holding.quantity = holding.quantity * cos;
+                holding.average_price /= cos;
                 let profit = this.calculate_profit(holding, transaction, financial_year);
                 // console.debug("Profit: " + profit);
             }

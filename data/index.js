@@ -32,11 +32,11 @@ function parse_cos_data(cos_data) {
     return cos_data_map;
 }
 
-function get_cos(symbol, date) {
+function get_cos(symbol, date, last_cos) {
 
     let cos_array = this.cos_data.get(symbol);
     if (!cos_array)
-        return 1;
+        return null;
 
     // for (let cos_item of cos_array) {
     //     if (cos_item.date >= date)
@@ -48,14 +48,16 @@ function get_cos(symbol, date) {
 
         let next_cos_date = cos_array[i + 1] ? cos_array[i + 1].date : null;
         if (!next_cos_date) {
-            return cos_date < date ? cos_item.cos : 1;
+            if (last_cos)
+                return last_cos < cos_date && cos_date < date ? cos_item : null;
+            return cos_date < date ? cos_item : null;
         }
         else if (cos_date < date && date < next_cos_date) {
-            return cos_item.cos;
+            return cos_item;
         }
     }
 
-    return 1;
+    return null;
 }
 
 let cos_obj = {
