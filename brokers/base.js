@@ -227,16 +227,27 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
             let year = last_transaction.date.getFullYear();
             let close_year = transaction.date.getFullYear();
             if (year != close_year) {
-                let month = last_transaction.date.getMonth();
-                let close_month = transaction.date.getMonth();
-                if (month <= close_month) {
-                    let day = last_transaction.date.getDate();
-                    let close_day = transaction.date.getDate();
+                if (close_year - year > 1) {
+                    profit.discount_eligible = true;
+                }
+                else {
+                    let month = last_transaction.date.getMonth();
+                    let close_month = transaction.date.getMonth();
+                    if (month <= close_month) {
 
-                    if (day < close_day) {
-                        // the asset is hold more than 12 months
-                        profit.discount_eligible = true;
-                        // profit.discount_quantity += last_transaction.quantity;
+                        if ((close_month - month) > 1) {
+                            profit.discount_eligible = true;
+                        }
+                        else {
+                            let day = last_transaction.date.getDate();
+                            let close_day = transaction.date.getDate();
+
+                            if (day <= close_day) {
+                                // the asset is hold more than 12 months
+                                profit.discount_eligible = true;
+                                // profit.discount_quantity += last_transaction.quantity;
+                            }
+                        }
                     }
                 }
             }

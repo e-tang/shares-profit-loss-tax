@@ -126,6 +126,8 @@ years_array.forEach(function (year) {
 
 
 // Now show the current portfolio
+console.log();
+console.log("==============================");
 let remaining_cost = 0;
 portfolio.holdings.forEach(function (holding) {
     if (holding.quantity > 0) {
