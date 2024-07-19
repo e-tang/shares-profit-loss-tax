@@ -542,7 +542,7 @@ Broker.prototype.load_content = function (trades, content, options) {
  * Load the broker's data from the CSV file.
  */
 Broker.prototype.load = function (files, offset, options) {
-    console.log("Loading CommSec data...");
+    console.log(`Loading ${this.name} data...`);
     if (!options && typeof offset == 'object') {
         options = offset;
         offset = 0;

@@ -53,6 +53,8 @@ function get_cos(symbol, date, last_cos) {
             return cos_date < date ? cos_item : null;
         }
         else if (cos_date < date && date < next_cos_date) {
+            if (last_cos)
+                return last_cos < cos_date ? cos_item : null;
             return cos_item;
         }
     }
