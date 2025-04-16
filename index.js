@@ -14,21 +14,43 @@ const models = require('./lib/models');
 let app_data = require('./data');
 
 var params = new Params({
-    "broker": "default",
+    "broker": null,
     "save": false,
     "portfolio-file": "portfolio.json",
     "year": -1,
     "details": false,
     "symbol": null,
     "ignore": [],
+    "col-symbol": null,
+    "col-date": null,
+    "col-quantity": null,
+    "col-price": null,
+    "col-type": null,
+    "col-total": null,
+    "col-commission": null,
+    "col-fees": null,
+    "col-tax": null,
+    "col-exchange": null,
+    "col-currency": null,
+    "adjust-transaction": true,
 });
 
 var opts = params.getOpts();
 // var optCount = params.geOptCount();
-
-let broker = brokers[opts.broker];
 var input = opts['---'];
-let trades = broker.load(input);
+var trades;
+
+let broker = brokers.get_broker(opts.broker, opts);
+
+if (!broker) {
+    if (opts.broker) {
+        console.error("Unsupported broker: " + opts.broker);
+    }
+    console.log("Usage: node index.js --broker <broker> [--save] [--portfolio-file <file>] [--year <year>] [--details] [--symbol <symbol>] [--ignore <symbol>] [--col-symbol <index>] [--col-date <index>] [--col-quantity <index>] [--col-price <index>] [--col-type <index>] <input>");
+
+    process.exit(1);
+}
+trades = broker.load(input);
 
 function transaction_sort(a, b) {
     if (a.date < b.date)

@@ -351,11 +351,29 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades, app_data)
         }
 
         trade_value.transactions.push(transaction);
-        if (transaction.type == "buy") {
-            trade_value.buy += transaction.total;
+        if (transaction.total) {
+            if (transaction.type == "buy") {
+                trade_value.buy += transaction.total;
+            }
+            else if (transaction.type == "sell") {
+                trade_value.sell += transaction.total;
+            }
+            else {
+                console.error("Unknown transaction type: " + transaction.type);
+                process.exit(1);
+            }
         }
-        else if (transaction.type == "sell") {
-            trade_value.sell += transaction.total;
+        else {
+            if (transaction.type == "buy") {
+                trade_value.buy += transaction.price * transaction.quantity;
+            }
+            else if (transaction.type == "sell") {
+                trade_value.sell += transaction.price * transaction.quantity;
+            }
+            else {
+                console.error("Unknown transaction type: " + transaction.type);
+                process.exit(1);
+            }
         }
         // else if (transaction.type == "dividends") {
         // }
@@ -363,10 +381,6 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades, app_data)
         // }
         // else if (transaction.type == "withdraw") {
         // }
-        else {
-            console.error("Unknown transaction type: " + transaction.type);
-            process.exit(1);
-        }
 
         let quantity = transaction.quantity;
         let transaction_value = transaction.value;
@@ -450,7 +464,7 @@ Broker.prototype.quote_count_check = function (line) {
  * @param {*} line 
  * @returns 
  */
-Broker.prototype.is_data_line_started = function (line) {
+Broker.prototype.is_data_line_started = function (line, index) {
     var count = (line.match(/,/g) || []).length;
 
     if (count < this.minimum_commas_count) {
@@ -460,8 +474,19 @@ Broker.prototype.is_data_line_started = function (line) {
     return this.quote_count_check(line);
 }
 
-Broker.prototype.is_data_line_ended = function (line) {
+Broker.prototype.is_data_line_ended = function (line, index) {
     return line.trim().length == 0;
+}
+
+Broker.prototype.adjust_transaction_common = function (transaction) {
+    // adjust the transaction
+    if (this.adjust_transaction) {
+        if (transaction.type == 'sell') {
+            transaction.quantity = -transaction.quantity;
+            transaction.value = -transaction.value;
+            transaction.total = -transaction.total;
+        }
+    }
 }
 
 Broker.prototype.line_to_transaction = function (fields) {
@@ -542,7 +567,7 @@ Broker.prototype.load_content = function (trades, content, options) {
  * Load the broker's data from the CSV file.
  */
 Broker.prototype.load = function (files, offset, options) {
-    console.log("Loading CommSec data...");
+    console.log(`Loading ${this.name} data...`);
     if (!options && typeof offset == 'object') {
         options = offset;
         offset = 0;

@@ -95,11 +95,7 @@ CommSec.prototype.line_to_transaction_after_2023 = function (fields, index) {
     else
         transaction.total = parseFloat(fields[3]);
 
-    if (transaction.type == 'sell') {
-        transaction.quantity = -transaction.quantity;
-        transaction.value = -transaction.value;
-        transaction.total = -transaction.total;
-    }
+    this.adjust_transaction_common(transaction);
     return transaction;
 }
 

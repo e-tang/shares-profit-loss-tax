@@ -80,11 +80,12 @@ FPMarkets.prototype.line_to_transaction = function (fields, index) {
     // total is the trade value as commission is calculated separately 
     transaction.total = transaction.value = parseFloat(fields[10]);
 
-    if (transaction.type == 'sell') {
-        transaction.quantity = -transaction.quantity;
-        transaction.total = -transaction.total;
-        transaction.value = -transaction.value;
-    }
+    // if (transaction.type == 'sell') {
+    //     transaction.quantity = -transaction.quantity;
+    //     transaction.total = -transaction.total;
+    //     transaction.value = -transaction.value;
+    // }
+    this.adjust_transaction_common(transaction);
 
     return transaction;
 }
