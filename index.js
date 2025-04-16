@@ -7,6 +7,8 @@ const Params = require('node-programmer/params');
 const brokers = require('./brokers');
 const models = require('./lib/models');
 
+const fs = require('fs');
+
 /*
  consolidation or split data
  at the moment we are assuming the consolidation or split only happens once
@@ -15,7 +17,7 @@ let app_data = require('./data');
 
 var params = new Params({
     "broker": null,
-    "save": false,
+    "save": true,
     "portfolio-file": "portfolio.json",
     "year": -1,
     "details": false,
@@ -141,7 +143,7 @@ years_array.forEach(function (year) {
     console.log("Biggest winning trade: " + financial_year_pl.trade_profit_max.toString());
     console.log("Biggest losing trade: " + financial_year_pl.trade_loss_max.toString());
     console.log();
-    console.log("At the end of the financial year portfolio (" + financial_year_str + "):");
+    // console.log("At the end of the financial year portfolio (" + financial_year_str + "):");
 
     console.log("==============================");
 });
@@ -160,4 +162,9 @@ portfolio.holdings.forEach(function (holding) {
 });
 console.log("Portfolio cost: " + remaining_cost);
 console.log("");
+
+console.log("Saving portfolio to file: " + opts['portfolio-file']);
+if (opts.save) {
+    fs.writeFileSync(opts['portfolio-file'], JSON.stringify(portfolio, null, 4));
+}
 // console.log("Total buy and sell offset: " + (financial_year_pl.total_buy + financial_year_pl.total_sell));
