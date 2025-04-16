@@ -393,7 +393,7 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades, app_data)
                 holding.last_cos = cos_obj.date;
                 console.debug(`Instrument (${symbol}) consolidation or split before ${transaction.date.toISOString()}: ${cos}`);
             }
-
+            
             if ((holding.quantity > 0 && quantity < 0) || 
                 (holding.quantity < 0 && quantity > 0)) {
                 // close the position fully or partially

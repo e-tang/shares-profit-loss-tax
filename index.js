@@ -35,6 +35,7 @@ var params = new Params({
     "col-exchange": null,
     "col-currency": null,
     "adjust-transaction": true,
+    "price-unit": 0.01,
 });
 
 var opts = params.getOpts();
