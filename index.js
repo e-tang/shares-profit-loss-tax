@@ -146,8 +146,19 @@ years_array.forEach(function (year) {
     console.log();
     // console.log("At the end of the financial year portfolio (" + financial_year_str + "):");
 
-    console.log("==============================");
+    // console.log("==============================");
 });
+
+
+// Now show the P/L for each symbol
+console.log("");
+console.log("==============================");
+portfolio.holdings.forEach(function (holding) {
+    if (holding.quantity > 0) {
+        console.log((holding.symbol || "") + "> P/L:" + holding.profit.toFixed(2));
+    }
+});
+console.log("");
 
 
 // Now show the current portfolio
@@ -157,7 +168,7 @@ let remaining_cost = 0;
 portfolio.holdings.forEach(function (holding) {
     if (holding.quantity > 0) {
         let cost = holding.average_price * holding.quantity;
-        console.log((holding.symbol || "") + ": " /* "(" + holding.company + "): " */ + holding.quantity + "@" + holding.average_price) + ", cost: " + cost;
+        console.log(holding.symbol + "> " /* "(" + holding.company + "): " */ + holding.quantity + "@" + holding.average_price.toFixed(3)) + ", cost: " + cost;
         remaining_cost += cost;
     }
 });

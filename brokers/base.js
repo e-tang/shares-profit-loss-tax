@@ -197,8 +197,13 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
         // holding.average_price = left_cost / holding.quantity;
     
         // let cost = holding.quantity == quantity_target ? holding.cost : holding.average_price * transaction.quantity;
-        let total = transaction.price * profit_quantity;
-        let profit_num = last_transaction.quantity > 0 ? (total - cost) : (cost - total);
+        let current_total = null;
+        if (transaction.total)
+            current_total = transaction.total;
+        else
+            current_total = transaction.price * profit_quantity; // transaction.value;
+        // the reason for this complication is that the price unit of the instructment price could be different from the total value
+        let profit_num = last_transaction.quantity > 0 ? (current_total - cost) : (cost - current_total);
         // if (fee_absorbed == false) {
         //     // if there are multiple transactions, then only the last transaction will absorb the fee
         //     profit_num -= transaction.fee;
@@ -393,7 +398,7 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades, app_data)
                 holding.last_cos = cos_obj.date;
                 console.debug(`Instrument (${symbol}) consolidation or split before ${transaction.date.toISOString()}: ${cos}`);
             }
-            
+
             if ((holding.quantity > 0 && quantity < 0) || 
                 (holding.quantity < 0 && quantity > 0)) {
                 // close the position fully or partially
