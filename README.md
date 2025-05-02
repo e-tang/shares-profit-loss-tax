@@ -9,7 +9,7 @@ The ATO rules for calculating the profit / loss of stock trading are as follows:
 - The profit / loss is calculated by summing the profit / loss of each stock trade
 - The profit / loss of each stock trade is calculated by subtracting the buy price from the sell price
 
-Any assets hold more than 12 months are entitled to a 50% discount on the profit / loss.
+Any assets held more than 12 months are entitled to a 50% discount on the profit / loss.
 
 ## Supported Brokers
 - CommSec
@@ -20,11 +20,18 @@ As the author only has accounts with these two brokers, only these two brokers a
 ## Installation and Usage
 
 ### Installation
+
+As a command-line tool:
 ```bash
 npm install -g sprolosta
 ```
 
-### Usage
+As a library in your project:
+```bash
+npm install sprolosta
+```
+
+### Command-line Usage
 
 #### Split and Consolidation of Shares
 
@@ -44,22 +51,50 @@ sprolosta --broker commsec Transactions_2540927_01072022_30062023.csv
 
 ```bash
 sprolosta --broker fpmarkets 2020.csv 2021.csv 2022.csv 2023.csv
-
 ```
 
 #### Example 3 - Check Only a Few Symbols
 
 ```bash
 sprolosta --broker fpmarkets --symbol AKE,MP1,VSR 2020.csv 2021.csv 2022.csv 2023.csv
-
 ```
 
-### Example 4 - Ignore a Few Symbols
+#### Example 4 - Ignore a Few Symbols
 
 ```bash
 sprolosta --broker fpmarkets --ignore BMN 2020.csv 2021.csv 2022.csv 2023.csv
-
 ```
+
+### Library Usage
+
+You can also use SPROLOSTA as a library in your Node.js applications:
+
+```javascript
+const sprolosta = require('sprolosta');
+
+// Process from files
+const results = sprolosta.processTrades(['transactions.csv'], {
+  broker: 'commsec',
+  symbol: 'CBA,NAB',
+  ignore: ['APT']
+});
+
+// Or from a CSV string
+const csvString = `
+Code,Trade Date,Settlement Date,Type,Description,Quantity,Average Price,Trade Value,Brokerage,GST,Contract Note,Currency
+CBA,20/02/2023,22/02/2023,BUY,COMMONWEALTH BANK OF,100,100.00,10000.00,19.95,2.00,CN123456,AUD
+CBA,21/05/2023,23/05/2023,SELL,COMMONWEALTH BANK OF,100,105.00,10500.00,19.95,2.00,CN123457,AUD
+`;
+
+const results = sprolosta.processTrades(csvString, {
+  broker: 'commsec'
+});
+
+// Access results
+console.log(`Total profit: ${results.holdings[0].profit}`);
+```
+
+See the `/examples` directory for more detailed usage examples.
 
 ## Disclaimer
 

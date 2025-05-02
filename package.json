@@ -1,8 +1,8 @@
 {
   "name": "sprolosta",
-  "version": "0.0.3",
-  "description": "A nodejs app that computes the profit / loss of stock trading for each financial year",
-  "main": "index.js",
+  "version": "0.0.4",
+  "description": "A nodejs app and library that computes the profit / loss of stock trading for each financial year",
+  "main": "lib.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -36,6 +36,17 @@
     "node-programmer": "^0.0.29"
   },
   "bin": {
-    "sprolosta": "./sprolosta.js"
+    "sprolosta": "./cli.js"
+  },
+  "files": [
+    "lib.js",
+    "cli.js",
+    "lib/*.js",
+    "brokers/*.js",
+    "data/*.js",
+    "data/*.json"
+  ],
+  "exports": {
+    ".": "./lib.js"
   }
 }
