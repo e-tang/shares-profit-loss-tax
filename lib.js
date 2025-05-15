@@ -9,6 +9,8 @@ const utils = require('./lib/utils');
 const fs = require('fs');
 const app_data = require('./data');
 
+const { normalizeData } = require('./brokers')
+
 /**
  * Sort transactions by date
  * @param {Object} a First transaction
@@ -56,12 +58,6 @@ function processTrades(input, options = {}) {
 
     // Merge default options with provided options
     const opts = { ...defaults, ...options };
-    
-    // Get broker
-    const broker = brokers.get_broker(opts.broker, opts);
-    if (!broker) {
-        throw new Error("Unsupported broker: " + opts.broker);
-    }
 
     // Load trades
     let trades;
@@ -70,9 +66,15 @@ function processTrades(input, options = {}) {
     if (typeof input === 'string' && (!Array.isArray(input) || input.includes('\n'))) {
         // Input is CSV content string
         trades = new models.Trades();
-        broker.load_content(trades, input, { index: 0, offset: 0 });
+        // broker.load_content(trades, input, { index: 0, offset: 0 });
+        trades = normalizeData(input, opts.broker, {index: 0, offset: 0, ...opts});
     } else {
         // Input is a file path or array of file paths
+        // Get broker
+        const broker = brokers.get_broker(opts.broker || null, opts);
+        if (!broker) {
+            throw new Error("Unsupported broker: " + opts.broker);
+        }
         trades = broker.load(input);
     }
 

@@ -16,10 +16,6 @@ function Broker () {
     this.quote_count_needed = false;
 }
 
-Broker.prototype.load = function (files, offset) {
-    throw new Error("Not implemented");
-}
-
 Broker.prototype.calculate_financial_year_profit = function (portfolio, year, options) {
     options = options || {};
     let financial_year = new models.FinancialYear();
@@ -499,6 +495,7 @@ Broker.prototype.line_to_transaction = function (fields) {
 }
 
 Broker.prototype.load_content_common = function (trades, content, options) {
+    trades = trades || new models.Trades();
     let { index, offset } = options;
     let count = 0;
 
@@ -561,7 +558,10 @@ Broker.prototype.load_content_common = function (trades, content, options) {
 
         transactions.push(transaction);
     }
-    return count;
+    return {
+        count: count,
+        trades
+    };
 }
 
 Broker.prototype.load_content = function (trades, content, options) {

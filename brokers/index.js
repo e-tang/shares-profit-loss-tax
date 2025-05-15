@@ -9,6 +9,8 @@ const FPMarkets = require('./fpmarkets');
 const Any = require('./any');
 const Papa = require("papaparse");
 
+const models = require('../lib/models');
+
 const commsec = new CommSec();
 
 const normalizeCommSecData = (csvData) => {
@@ -52,31 +54,6 @@ const identifyBroker = (csvContent) => {
     return null;
 };
 
-const parseCSVContent = (csvContent, brokerName) => {
-    if (!brokerName) {
-        brokerName = identifyBroker(csvContent);
-        if (!brokerName) {
-            throw new Error("Could not identify broker from CSV content. Please specify broker name.");
-        }
-    }
-    
-    // Get broker instance
-    const broker = module.exports.get_broker(brokerName);
-    if (!broker) {
-        throw new Error("Unsupported broker: " + brokerName);
-    }
-    
-    // Create empty trades container
-    const models = require('../lib/models');
-    const trades = new models.Trades();
-    
-    // Use broker-specific content loading
-    const options = { index: 0, offset: 0 };
-    broker.load_content(trades, csvContent, options);
-    
-    return trades;
-};
-
 module.exports = {
     commsec: commsec,
     fpmarkets: new FPMarkets(),
@@ -84,7 +61,30 @@ module.exports = {
     normalizeFPMarketsData,
     normalizeGenericData,
     identifyBroker,
-    parseCSVContent,
+
+    normailzeData: (csvContent, brokerName, options) => {
+        if (!brokerName) {
+            brokerName = identifyBroker(csvContent);
+            if (!brokerName) {
+                throw new Error("Could not identify broker from CSV content. Please specify broker name.");
+            }
+        }
+        
+        // Get broker instance
+        const broker = this.get_broker(brokerName, options);
+        if (!broker) {
+            throw new Error("Unsupported broker: " + brokerName);
+        }
+        
+        // Create empty trades container
+        const trades = new models.Trades();
+        
+        // Use broker-specific content loading
+        const options = { index: 0, offset: 0 };
+        broker.load_content(trades, csvContent, options);
+        
+        return trades;
+    },
 
     get_broker: function (name, options) {
         try {

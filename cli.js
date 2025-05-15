@@ -35,7 +35,8 @@ const params = new Params({
 const opts = params.getOpts();
 const input = opts['---'];
 
-if (!opts.broker || !input || input.length === 0) {
+// broker is no longer essential to be provided in the argumetn
+if (!input || input.length === 0) {
     console.log("Usage: sprolosta --broker <broker> [--save] [--portfolio-file <file>] [--year <year>] [--details] [--symbol <symbol>] [--ignore <symbol>] [--col-symbol <index>] [--col-date <index>] [--col-quantity <index>] [--col-price <index>] [--col-type <index>] <input>");
     process.exit(1);
 }
