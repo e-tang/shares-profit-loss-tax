@@ -76,17 +76,28 @@ function processTrades(input, options = {}) {
         trades = broker.load(input);
     }
 
+    return processTradesWithRecords(trades, broker, opts);
+}
+
+/**
+ * Process trade records and calculate profits/losses
+ * @param {Object} trades Trade records from broker
+ * @param {Object} broker Broker instance
+ * @param {Object} options Configuration options
+ * @returns {Object} Result object with portfolio and profit/loss information
+ */
+function processTradesWithRecords(trades, broker, options = {}) {
     // Create portfolio
     const portfolio = new models.Portfolio();
     
     // Process symbols to ignore
-    const symbols_to_ignore = new Set(opts.ignore);
+    const symbols_to_ignore = new Set(options.ignore);
     
     // Filter symbols if specified
     let symbols_array = null;
-    if (opts.symbol && opts.symbol.length > 0) {
+    if (options.symbol && options.symbol.length > 0) {
         symbols_array = [];
-        const symbols = typeof opts.symbol === 'string' ? opts.symbol.split(',') : opts.symbol;
+        const symbols = typeof options.symbol === 'string' ? options.symbol.split(',') : options.symbol;
         symbols.forEach(function (symbol) {
             const transactions = trades.symbols.get(symbol);
             if (transactions) {
@@ -107,7 +118,7 @@ function processTrades(input, options = {}) {
     });
 
     // Determine years to process
-    const years_array = opts.year > -1 ? [opts.year] : Array.from(trades.years);
+    const years_array = options.year > -1 ? [options.year] : Array.from(trades.years);
     years_array.sort();
     years_array.unshift(years_array[0] - 1);
     
@@ -128,7 +139,7 @@ function processTrades(input, options = {}) {
             portfolio,
             year,
             {
-                details: opts.details
+                details: options.details
             }
         );
 
@@ -160,8 +171,8 @@ function processTrades(input, options = {}) {
     });
 
     // Save portfolio if requested
-    if (opts.save && opts['portfolio-file']) {
-        fs.writeFileSync(opts['portfolio-file'], JSON.stringify(portfolio, null, 4));
+    if (options.save && options['portfolio-file']) {
+        fs.writeFileSync(options['portfolio-file'], JSON.stringify(portfolio, null, 4));
     }
 
     return results;
@@ -169,6 +180,7 @@ function processTrades(input, options = {}) {
 
 module.exports = {
     processTrades,
+    processTradesWithRecords,
     models,
     utils,
     brokers
