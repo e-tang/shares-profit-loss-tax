@@ -9,7 +9,8 @@ const utils = require('./lib/utils');
 const fs = require('fs');
 const app_data = require('./data');
 
-const { normalizeData } = require('./brokers')
+const { off } = require('process');
+
 
 /**
  * Sort transactions by date
@@ -60,7 +61,14 @@ function processTrades(input, options = {}) {
     const opts = { ...defaults, ...options };
 
     // Load trades
-    let trades;
+    let all_trades = new models.Trades();
+
+    // Input is a file path or array of file paths
+    // Get broker
+    const broker = brokers.get_broker(opts.broker || null, opts);
+    if (!broker) {
+        throw new Error("Unsupported broker: " + (opts.broker || "not provided"));
+    }
     
     // Handle string input (CSV content) or file paths
     if (typeof input === 'string' && (!Array.isArray(input) || input.includes('\n'))) {
@@ -69,16 +77,45 @@ function processTrades(input, options = {}) {
         // broker.load_content(trades, input, { index: 0, offset: 0 });
         trades = normalizeData(input, opts.broker, {index: 0, offset: 0, ...opts});
     } else {
-        // Input is a file path or array of file paths
-        // Get broker
-        const broker = brokers.get_broker(opts.broker || null, opts);
-        if (!broker) {
-            throw new Error("Unsupported broker: " + opts.broker);
+        /**
+         * Load the broker's data from the CSV file.
+         */
+        function load (files, offset, options) {
+            console.log(`Loading ${this.name} data...`);
+            if (!options && typeof offset == 'object') {
+                options = offset;
+                offset = 0;
+            }
+
+            offset = offset || 0;
+            options = options || {};
+
+            if (!Array.isArray(files)) {
+                files = [files];
+            }
+            let total_count = 0;
+            for (let i = 0; i < files.length; i++) {
+                try {
+                    if (!fs.existsSync(files[i])) {
+                        console.error("File not found: " + files[i]);
+                        process.exit(1);
+                    }
+                    console.log("Loading transactions file: " + files[i])
+                    let content = fs.readFileSync(files[i], 'utf8');
+                    // let { count, trades } = this.load_content(trades, content, { index: total_count, offset: offset });
+                    let { count, trades } = brokers.normalizeData(content, opts.broker, {index: total_count, offset: offset, trades: all_trades, ...opts});
+                    total_count += count;
+                    all_trades = trades;
+                }
+                catch (err) {
+                    console.log(err);
+                }
+            }
         }
-        trades = broker.load(input);
+        load(input);
     }
 
-    return processTradesWithRecords(trades, broker, opts);
+    return processTradesWithRecords(all_trades, broker, opts);
 }
 
 /**

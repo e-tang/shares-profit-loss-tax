@@ -98,6 +98,6 @@ try {
     }
     
 } catch (error) {
-    console.error("Error processing trades:", error.message);
+    console.error("Error processing trades:", error.message, error.stack);
     process.exit(1);
 }

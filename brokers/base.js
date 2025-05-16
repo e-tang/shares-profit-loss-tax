@@ -6,8 +6,6 @@
 const models = require("../lib/models");
 const utils = require("../lib/utils");
 
-const fs = require("fs");
-
 function Broker () {
     this.name = "general";
     this.shortsell_allowed = false;
@@ -568,41 +566,5 @@ Broker.prototype.load_content = function (trades, content, options) {
     return this.load_content_common(trades, content, options);
 }
 
-/**
- * Load the broker's data from the CSV file.
- */
-Broker.prototype.load = function (files, offset, options) {
-    console.log(`Loading ${this.name} data...`);
-    if (!options && typeof offset == 'object') {
-        options = offset;
-        offset = 0;
-    }
-
-    offset = offset || 0;
-    options = options || {};
-
-    let trades = new models.Trades();
-
-    if (!Array.isArray(files)) {
-        files = [files];
-    }
-    let count = 0;
-    for (let i = 0; i < files.length; i++) {
-        try {
-            if (!fs.existsSync(files[i])) {
-                console.error("File not found: " + files[i]);
-                process.exit(1);
-            }
-            console.log("Loading transactions file: " + files[i])
-            let content = fs.readFileSync(files[i], 'utf8');
-            count += this.load_content(trades, content, { index: count, offset: offset });
-        }
-        catch (err) {
-            console.log(err);
-        }
-    }
-
-    return trades;
-}
 
 module.exports = Broker;

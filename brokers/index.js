@@ -54,39 +54,46 @@ const identifyBroker = (csvContent) => {
     return null;
 };
 
-module.exports = {
-    commsec: commsec,
-    fpmarkets: new FPMarkets(),
-    normalizeCommSecData,
-    normalizeFPMarketsData,
-    normalizeGenericData,
-    identifyBroker,
+function Brokers() {
+    this.commsec = commsec;
+    this.fpmarkets = new FPMarkets();
+    this.normalizeCommSecData = normalizeCommSecData;
+    this.normalizeFPMarketsData = normalizeFPMarketsData;
+    this.normalizeGenericData = normalizeGenericData;
+    this.identifyBroker = identifyBroker;
 
-    normailzeData: (csvContent, brokerName, options) => {
+    this.normalizeData = function (csvContent, brokerName, options) {
+        options = options || {};
+
         if (!brokerName) {
-            brokerName = identifyBroker(csvContent);
+            brokerName = this.identifyBroker(csvContent);
             if (!brokerName) {
                 throw new Error("Could not identify broker from CSV content. Please specify broker name.");
             }
         }
-        
+
         // Get broker instance
         const broker = this.get_broker(brokerName, options);
         if (!broker) {
             throw new Error("Unsupported broker: " + brokerName);
         }
-        
-        // Create empty trades container
-        const trades = new models.Trades();
-        
-        // Use broker-specific content loading
-        const options = { index: 0, offset: 0 };
-        broker.load_content(trades, csvContent, options);
-        
-        return trades;
-    },
 
-    get_broker: function (name, options) {
+        // Create empty trades container
+        let existing_trades = options.trades || new models.Trades();
+
+        // Use broker-specific content loading
+        return broker.load_content(
+            existing_trades,
+            csvContent,
+            {
+                index: 0,
+                offset: 0,
+                ...options
+            }
+        );
+    };
+
+    this.get_broker = function (name, options) {
         try {
             if (name == null)
                 return new Any(options);
@@ -97,11 +104,13 @@ module.exports = {
                 return null;
             }
             return broker;
-        }
-        catch (e) {
+        } catch (e) {
             console.error("Error: " + e.message);
             return null;
         }
-    },
-    default: commsec,
+    };
+
+    this.default = commsec;
 }
+
+module.exports = new Brokers();
