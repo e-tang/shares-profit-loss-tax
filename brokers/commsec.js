@@ -8,7 +8,6 @@
 const Broker = require('./base');
 
 const util = require('util');
-const fs = require('fs');
 
 const utils = require('../lib/utils');
 
