@@ -13,8 +13,8 @@ const utils = require('../lib/utils');
 
 const models = require('../lib/models');
 
-function CommSec() {
-    Broker.call(this);
+function CommSec(options) {
+    Broker.call(this, options);
 
     this.name = "CommSec";
 
@@ -140,6 +140,8 @@ CommSec.prototype.line_to_transaction_before_2023 = function (fields, index) {
     // if it is a sell, it is a negative value with fee taken out
     // e.g. value = -999, fee = 10, total = -989
     transaction.total = parseFloat(fields[10]);
+
+    this.adjust_transaction_common(transaction);
 
     return transaction;
 }

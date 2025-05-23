@@ -6,12 +6,20 @@
 const models = require("../lib/models");
 const utils = require("../lib/utils");
 
-function Broker () {
+function Broker (options) {
     this.name = "general";
     this.shortsell_allowed = false;
     this.missing_trades = new Map();
     this.minimum_commas_count = 5; // 6 columns at least
     this.quote_count_needed = false;
+
+    this.adjust_transaction = true;
+
+    if (options) {
+        if (typeof options["adjust-transaction"] == 'boolean') {
+            this.adjust_transaction = options["adjust-transaction"];
+        }
+    }
 }
 
 Broker.prototype.calculate_financial_year_profit = function (portfolio, year, options) {
@@ -190,14 +198,18 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
         // let left_cost = holding.cost - transaction.total;
         // holding.average_price = left_cost / holding.quantity;
     
-        // let cost = holding.quantity == quantity_target ? holding.cost : holding.average_price * transaction.quantity;
+        // for all costs we use positive numbers
         let current_total = null;
         if (transaction.total)
-            current_total = transaction.total;
+            current_total = Math.abs(transaction.total);
         else
             current_total = transaction.price * profit_quantity; // transaction.value;
         // the reason for this complication is that the price unit of the instructment price could be different from the total value
-        let profit_num = last_transaction.quantity > 0 ? (current_total - cost) : (cost - current_total);
+        let profit_num = 0;
+        if (last_transaction.quantity > 0)
+            profit_num = (current_total - cost);
+        else
+            profit_num = (cost - current_total);
         // if (fee_absorbed == false) {
         //     // if there are multiple transactions, then only the last transaction will absorb the fee
         //     profit_num -= transaction.fee;
@@ -481,9 +493,9 @@ Broker.prototype.adjust_transaction_common = function (transaction) {
     // adjust the transaction
     if (this.adjust_transaction) {
         if (transaction.type == 'sell') {
-            transaction.quantity = -transaction.quantity;
-            transaction.value = -transaction.value;
-            transaction.total = -transaction.total;
+            transaction.quantity = -Math.abs(transaction.quantity);
+            transaction.value = -Math.abs(transaction.value);
+            transaction.total = -Math.abs(transaction.total);
         }
     }
 }

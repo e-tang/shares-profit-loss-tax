@@ -11,17 +11,12 @@ const Broker = require('./base');
 const models = require('../lib/models');
 
 function Any(options) {
-    Broker.call(this);
+    Broker.call(this, options);
 
     this.name = "Any";
-    this.adjust_transaction = true;
 
     this.price_unit = 1; // default to 1 dollar, but some trading platforms use 0.01 as the price unit so 1 dollar displays as 100
     this.total_unit = 1; // default to 1 dollar
-
-    if (typeof options["adjust-transaction"] == 'boolean') {
-        this.adjust_transaction = options["adjust-transaction"];
-    }
 
     /**
      * Since we don't know the format of the file, we will assume that the first line is the header.
