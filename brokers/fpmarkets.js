@@ -1,28 +1,26 @@
 /**
  * @file fpmarkets.js
  * 
- * Copyright (c) 2023 TYO Lab (TYONLINE TECHNOLOGY PTY. LTD.). All rights reserved.
+ * Copyright (c) 2025 TYO Lab (TYONLINE TECHNOLOGY PTY. LTD.). All rights reserved.
  * Licensed under the MIT License. See LICENSE file in the project root for full license information.
  */
 
 const Broker = require('./base');
 
-const util = require('util');
-const fs = require('fs');
-
 const models = require('../lib/models');
 
-function FPMarkets(options) {
-    Broker.call(this, options);
+class FPMarkets extends Broker {
+    constructor(options) {
+        super(options);
 
-    this.name = "FP Markets";
-    this.quote_count_needed = true;
-}
+        this.name = "FP Markets";
+        this.quote_count_needed = true;
+    }
 
-/**
- * Load the broker's data from the CSV file.
- */
-FPMarkets.prototype.line_to_transaction = function (fields, index) {
+    /**
+     * Load the broker's data from the CSV file.
+     */
+    line_to_transaction(fields, index) {
     // ID
     // Date
     // Time
@@ -83,8 +81,7 @@ FPMarkets.prototype.line_to_transaction = function (fields, index) {
     this.adjust_transaction_common(transaction);
 
     return transaction;
+    }
 }
-
-util.inherits(FPMarkets, Broker);
 
 module.exports = FPMarkets;

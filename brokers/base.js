@@ -6,23 +6,24 @@
 const models = require("../lib/models");
 const utils = require("../lib/utils");
 
-function Broker (options) {
-    this.name = "general";
-    this.shortsell_allowed = false;
-    this.missing_trades = new Map();
-    this.minimum_commas_count = 5; // 6 columns at least
-    this.quote_count_needed = false;
+class Broker {
+    constructor(options) {
+        this.name = "general";
+        this.shortsell_allowed = false;
+        this.missing_trades = new Map();
+        this.minimum_commas_count = 5; // 6 columns at least
+        this.quote_count_needed = false;
 
-    this.adjust_transaction = true;
+        this.adjust_transaction = true;
 
-    if (options) {
-        if (typeof options["adjust-transaction"] == 'boolean') {
-            this.adjust_transaction = options["adjust-transaction"];
+        if (options) {
+            if (typeof options["adjust-transaction"] === 'boolean') {
+                this.adjust_transaction = options["adjust-transaction"];
+            }
         }
     }
-}
 
-Broker.prototype.calculate_financial_year_profit = function (portfolio, year, options) {
+    calculate_financial_year_profit(portfolio, year, options) {
     options = options || {};
     let financial_year = new models.FinancialYear();
     financial_year.year = year;
@@ -129,9 +130,9 @@ Broker.prototype.calculate_financial_year_profit = function (portfolio, year, op
     financial_year.trade_profit_max = trade_profit_max;
     financial_year.trade_loss_max = trade_loss_max;
     return financial_year;
-}
+    }
 
-Broker.prototype.get_holding_profits_year = function (holding, financial_year) {
+    get_holding_profits_year(holding, financial_year) {
     // now decide which financial year the transaction belongs to
     // for any given year, the financial year is from 1 July of previous year to 30 June of current year
     // e.g. for 2018, the financial year is from 1 July 2018 to 30 June 2019
@@ -141,9 +142,9 @@ Broker.prototype.get_holding_profits_year = function (holding, financial_year) {
         holding.profits.set(financial_year, profits_year);
     }
     return profits_year;
-}
+    }
 
-Broker.prototype.calculate_profit = function (holding, transaction, financial_year) {
+    calculate_profit(holding, transaction, financial_year) {
     let profits_year = this.get_holding_profits_year(holding, financial_year);
 
     let transactions = holding.records;
@@ -323,9 +324,9 @@ Broker.prototype.calculate_profit = function (holding, transaction, financial_ye
     holding.average_close = holding.average_close == 0 ? transaction.price : (holding.average_close + transaction.price) / 2;
     holding.profit += (profit_all /* - transaction.fee */);
     return profit_all;
-}
+    }
 
-Broker.prototype.update_holding = function (portfolio, symbol, trades, app_data) {
+    update_holding(portfolio, symbol, trades, app_data) {
     if (!trades || trades.length == 0) {
         console.log("No trades to update");
         return;
@@ -454,9 +455,9 @@ Broker.prototype.update_holding = function (portfolio, symbol, trades, app_data)
             }
         }
     }
-}
+    }
 
-Broker.prototype.quote_count_check = function (line) {
+    quote_count_check(line) {
     if (!this.quote_count_needed)
         return true;
 
@@ -467,7 +468,7 @@ Broker.prototype.quote_count_check = function (line) {
      * so we need at least 6 commas
      */
     return quote_count > (this.minimum_commas_count * 2) && (quote_count % 2) == 0;
-}
+    }
 
 /**
  * When this happens the line is normally the header line
@@ -475,7 +476,7 @@ Broker.prototype.quote_count_check = function (line) {
  * @param {*} line 
  * @returns 
  */
-Broker.prototype.is_data_line_started = function (line, index) {
+    is_data_line_started(line, index) {
     var count = (line.match(/,/g) || []).length;
 
     if (count < this.minimum_commas_count) {
@@ -483,13 +484,13 @@ Broker.prototype.is_data_line_started = function (line, index) {
     }
 
     return this.quote_count_check(line);
-}
+    }
 
-Broker.prototype.is_data_line_ended = function (line, index) {
+    is_data_line_ended(line, index) {
     return line.trim().length == 0;
-}
+    }
 
-Broker.prototype.adjust_transaction_common = function (transaction) {
+    adjust_transaction_common(transaction) {
     // adjust the transaction
     if (this.adjust_transaction) {
         if (transaction.type == 'sell') {
@@ -498,13 +499,13 @@ Broker.prototype.adjust_transaction_common = function (transaction) {
             transaction.total = -Math.abs(transaction.total);
         }
     }
-}
+    }
 
-Broker.prototype.line_to_transaction = function (fields) {
+    line_to_transaction(fields) {
     throw new Error("Func (line_to_transaction) is Not implemented");
-}
+    }
 
-Broker.prototype.load_content_common = function (trades, content, options) {
+    load_content_common(trades, content, options) {
     trades = trades || new models.Trades();
     let { index, offset } = options;
     let count = 0;
@@ -572,11 +573,11 @@ Broker.prototype.load_content_common = function (trades, content, options) {
         count: count,
         trades
     };
-}
+    }
 
-Broker.prototype.load_content = function (trades, content, options) {
+    load_content(trades, content, options) {
     return this.load_content_common(trades, content, options);
+    }
 }
-
 
 module.exports = Broker;

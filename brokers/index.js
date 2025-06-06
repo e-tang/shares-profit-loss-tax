@@ -7,11 +7,10 @@
 const CommSec = require('./commsec');
 const FPMarkets = require('./fpmarkets');
 const Any = require('./any');
-const Papa = require("papaparse");
 
 const models = require('../lib/models');
 
-const commsec = new CommSec();
+// const commsec = new CommSec();
 
 const normalizeCommSecData = (csvData) => {
     return csvData.map(row => ({
@@ -54,35 +53,40 @@ const identifyBroker = (csvContent) => {
     return null;
 };
 
-function Brokers() {
-    this.commsec = commsec;
-    this.fpmarkets = new FPMarkets();
-    this.normalizeCommSecData = normalizeCommSecData;
-    this.normalizeFPMarketsData = normalizeFPMarketsData;
-    this.normalizeGenericData = normalizeGenericData;
-    this.identifyBroker = identifyBroker;
+class Brokers {
+    constructor() {
+        this.commsec = new CommSec();
+        this.fpmarkets = new FPMarkets();
+        this.normalizeCommSecData = normalizeCommSecData;
+        this.normalizeFPMarketsData = normalizeFPMarketsData;
+        this.normalizeGenericData = normalizeGenericData;
+        this.identifyBroker = identifyBroker;
+        this.default = this.commsec;
+    }
 
-    this.normalizeData = function (csvContent, brokerName, options) {
+    normalizeData(csvContent, brokerName, options) {
         options = options || {};
+        let lowercaseBroker = brokerName.toLowerCase();
+        let identifiedBroker = brokerName;
 
-        if (!brokerName) {
-            brokerName = this.identifyBroker(csvContent);
-            if (!brokerName) {
+        if (!brokerName || lowercaseBroker  === 'any') {
+            identifiedBroker = this.identifyBroker(csvContent);
+            if (!identifiedBroker && lowercaseBroker !== 'any') {
                 throw new Error("Could not identify broker from CSV content. Please specify broker name.");
             }
         }
 
         // Get broker instance
-        const broker = this.get_broker(brokerName, options);
+        const broker = this.get_broker(identifiedBroker, options);
         if (!broker) {
-            throw new Error("Unsupported broker: " + brokerName);
+            throw new Error(`Unsupported broker: ${identifiedBroker || 'any (auto-detected)'}`);
         }
 
         // Create empty trades container
         let existing_trades = options.trades || new models.Trades();
 
         // Use broker-specific content loading
-        return broker.load_content(
+        const result = broker.load_content(
             existing_trades,
             csvContent,
             {
@@ -91,26 +95,27 @@ function Brokers() {
                 ...options
             }
         );
-    };
+        return result;
+    }
 
-    this.get_broker = function (name, options) {
+    get_broker(name, options) {
         try {
-            if (name == null)
+            if (!name || name.toLowerCase() === 'any')
                 return new Any(options);
 
-            const broker = this[name];
-            if (broker == null) {
+            const brokerInstance = this[name.toLowerCase()]; // Ensure lowercase access
+            if (!brokerInstance) {
                 console.error("Unknown broker: " + name);
                 return null;
             }
-            return broker;
+            return brokerInstance;
         } catch (e) {
             console.error("Error: " + e.message);
             return null;
         }
     };
 
-    this.default = commsec;
+    this.default = this.commsec;
 }
 
 module.exports = new Brokers();

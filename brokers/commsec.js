@@ -7,61 +7,60 @@
 
 const Broker = require('./base');
 
-const util = require('util');
-
 const utils = require('../lib/utils');
 
 const models = require('../lib/models');
 
-function CommSec(options) {
-    Broker.call(this, options);
+class CommSec extends Broker {
+    constructor(options) {
+        super(options);
 
-    this.name = "CommSec";
+        this.name = "CommSec";
 
-    /**
-     * Before 2023 financial year, CommSec provided a nicely structured CSV file with detailed information.through the years.
-     * Now they only provide a PDF file or a CSV file with less information.
-     */
-    this.before_2023 = false;
-}
-
-CommSec.prototype.quote_count_check = function (line) {
-    if (!this.before_2023)
-        return true;
-
-    return Broker.prototype.quote_count_check.call(this, line);
-}
-
-CommSec.prototype.load_content = function (trades, content, options) {
-    if (content.indexOf("Code,Company,") >= 0/*  && content.indexOf("Transaction Summary") >= 0 */) {
-        this.before_2023 = true;
-    }
-    else if (content.indexOf("Date,Reference,") >= 0) {
+        /**
+         * Before 2023 financial year, CommSec provided a nicely structured CSV file with detailed information.through the years.
+         * Now they only provide a PDF file or a CSV file with less information.
+         */
         this.before_2023 = false;
     }
-    else if (content.indexOf("No data available") >= 0) {
-        console.error("No data available");
-        return trades;
+
+    quote_count_check(line) {
+        if (!this.before_2023)
+            return true;
+
+        return super.quote_count_check(line);
     }
-    else {
-        let lines = content.split('\n');
-        for (let i = 0; i < 3; i++) {
-            console.log(lines[i]);
+
+    load_content(trades, content, options) {
+        if (content.indexOf("Code,Company,") >= 0/*  && content.indexOf("Transaction Summary") >= 0 */) {
+            this.before_2023 = true;
         }
-        console.error("Above is the first 3 lines of the file. Cannot determine the format.")
-        throw new Error("Unknown CommSec format");
+        else if (content.indexOf("Date,Reference,") >= 0) {
+            this.before_2023 = false;
+        }
+        else if (content.indexOf("No data available") >= 0) {
+            console.error("No data available");
+            return trades;
+        }
+        else {
+            let lines = content.split('\n');
+            for (let i = 0; i < 3; i++) {
+                console.log(lines[i]);
+            }
+            console.error("Above is the first 3 lines of the file. Cannot determine the format.")
+            throw new Error("Unknown CommSec format");
+        }
+        return super.load_content(trades, content, options);
     }
-    return Broker.prototype.load_content.call(this, trades, content, options);
-}
 
-CommSec.prototype.line_to_transaction = function (fields, index) {
-    if (this.before_2023) {
-        return this.line_to_transaction_before_2023(fields, index);
+    line_to_transaction(fields, index) {
+        if (this.before_2023) {
+            return this.line_to_transaction_before_2023(fields, index);
+        }
+        return this.line_to_transaction_after_2023(fields, index);
     }
-    return this.line_to_transaction_after_2023(fields, index);
-}
 
-CommSec.prototype.line_to_transaction_after_2023 = function (fields, index) {
+    line_to_transaction_after_2023(fields, index) {
     // Date
     // Reference
     // Details
@@ -96,9 +95,9 @@ CommSec.prototype.line_to_transaction_after_2023 = function (fields, index) {
 
     this.adjust_transaction_common(transaction);
     return transaction;
-}
+    }
 
-CommSec.prototype.line_to_transaction_before_2023 = function (fields, index) {
+    line_to_transaction_before_2023(fields, index) {
 
     // Code
     // Company
@@ -144,8 +143,7 @@ CommSec.prototype.line_to_transaction_before_2023 = function (fields, index) {
     this.adjust_transaction_common(transaction);
 
     return transaction;
+    }
 }
-
-util.inherits(CommSec, Broker);
 
 module.exports = CommSec;

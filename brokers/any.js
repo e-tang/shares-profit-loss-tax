@@ -10,41 +10,42 @@ const utils = require("../lib/utils");
 const Broker = require('./base');
 const models = require('../lib/models');
 
-function Any(options) {
-    Broker.call(this, options);
+class Any extends Broker {
+    constructor(options) {
+        super(options);
 
-    this.name = "Any";
+        this.name = "Any";
 
-    this.price_unit = 1; // default to 1 dollar, but some trading platforms use 0.01 as the price unit so 1 dollar displays as 100
-    this.total_unit = 1; // default to 1 dollar
+        this.price_unit = 1; // default to 1 dollar, but some trading platforms use 0.01 as the price unit so 1 dollar displays as 100
+        this.total_unit = 1; // default to 1 dollar
 
-    /**
-     * Since we don't know the format of the file, we will assume that the first line is the header.
-     * And the columns of header index must be specified in the options.
-     * for example:
-     * col-symbol: 0,
-     * col-date: 1,
-     * col-quantity: 2,
-     * col-price: 3,
-     * col-type: 4, assuming the type is either buy or sell, B or S
-     */
-    this.columns = {
-        symbol: null,
-        date: null,
-        quantity: null,
-        price: null,
-        type: null,
-        total: null,
-        commission: null,
-        fees: null,
-        tax: null,
-        exchange: null,
-        currency: null,
-    };
-    if (!options) {
-        throw new Error("Options must be provided with column mappings.");
-    }
-    if (options) {
+        /**
+         * Since we don't know the format of the file, we will assume that the first line is the header.
+         * And the columns of header index must be specified in the options.
+         * for example:
+         * col-symbol: 0,
+         * col-date: 1,
+         * col-quantity: 2,
+         * col-price: 3,
+         * col-type: 4, assuming the type is either buy or sell, B or S
+         */
+        this.columns = {
+            symbol: null,
+            date: null,
+            quantity: null,
+            price: null,
+            type: null,
+            total: null,
+            commission: null,
+            fees: null,
+            tax: null,
+            exchange: null,
+            currency: null,
+        };
+        if (!options) {
+            throw new Error("Options must be provided with column mappings.");
+        }
+
         this.columns.symbol = options['col-symbol'];
         this.columns.date = options['col-date'];
         this.columns.quantity = options['col-quantity'];
@@ -57,35 +58,31 @@ function Any(options) {
         this.columns.exchange = options['col-exchange'];
         this.columns.currency = options['col-currency'];
 
-        if (options['price-unit'] != null && options['price-unit'] != undefined)
-            this.price_unit = options['price-unit'] - 0;
+        if (options['price-unit'] != null && options['price-unit'] !== undefined)
+            this.price_unit = Number(options['price-unit']);
 
-        if (options['total-unit'] != null && options['total-unit'] != undefined)
-            this.total_unit = options['total-unit'] - 0;
+        if (options['total-unit'] != null && options['total-unit'] !== undefined)
+            this.total_unit = Number(options['total-unit']);
+
+        const missingColumns = [];
+        if (this.columns.symbol == null) missingColumns.push("col-symbol");
+        if (this.columns.date == null) missingColumns.push("col-date");
+        if (this.columns.quantity == null) missingColumns.push("col-quantity");
+        if (this.columns.price == null) missingColumns.push("col-price");
+        if (this.columns.type == null) missingColumns.push("col-type");
+
+        // the following are not mandatory
+        // if (this.columns.total == null) missingColumns.push("col-total");
+        // if (this.columns.commission == null) missingColumns.push("col-commission");
+        // if (this.columns.fees == null) missingColumns.push("col-fees");
+        // if (this.columns.tax == null) missingColumns.push("col-tax");
+        // if (this.columns.exchange == null) missingColumns.push("col-exchange");
+        // if (this.columns.currency == null) missingColumns.push("col-currency");
+
+        if (missingColumns.length > 0) {
+            throw new Error(`Missing column mappings: ${missingColumns.join(", ")}`);
+        }
     }
-
-    const missingColumns = [];
-    if (this.columns.symbol == null) missingColumns.push("col-symbol");
-    if (this.columns.date == null) missingColumns.push("col-date");
-    if (this.columns.quantity == null) missingColumns.push("col-quantity");
-    if (this.columns.price == null) missingColumns.push("col-price");
-    if (this.columns.type == null) missingColumns.push("col-type");
-
-    // the following are not mandatory
-    // if (this.columns.total == null) missingColumns.push("col-total");
-    // if (this.columns.commission == null) missingColumns.push("col-commission");
-    // if (this.columns.fees == null) missingColumns.push("col-fees");
-    // if (this.columns.tax == null) missingColumns.push("col-tax");
-    // if (this.columns.exchange == null) missingColumns.push("col-exchange");
-    // if (this.columns.currency == null) missingColumns.push("col-currency");
-
-    if (missingColumns.length > 0) {
-        throw new Error(`Missing column mappings: ${missingColumns.join(", ")}`);
-    }
-}
-
-Any.prototype = Object.create(Broker.prototype);
-Any.prototype.constructor = Any;
 
 // just use the base class implementation
 // Any.prototype.quote_count_check = function (line) {
@@ -93,7 +90,7 @@ Any.prototype.constructor = Any;
 // }
 
 // implement the line_to_transaction function
-Any.prototype.line_to_transaction = function (fields, index) {
+    line_to_transaction(fields, index) {
     let transaction = new models.Transaction();
 
     transaction.symbol = fields[this.columns.symbol].trim();
@@ -103,7 +100,7 @@ Any.prototype.line_to_transaction = function (fields, index) {
     transaction.type = fields[this.columns.type].trim();
     // add condition to check if the quantity is negative
     if (fields[this.columns.total] != null &&
-        fields[this.columns.total] != undefined
+        fields[this.columns.total] !== undefined
     )
     transaction.total = parseFloat(fields[this.columns.total]);
     if (fields[this.columns.commission] !== null &&
@@ -139,7 +136,7 @@ Any.prototype.line_to_transaction = function (fields, index) {
     this.adjust_transaction_common(transaction);
 
     return transaction;
+    }
 }
-
 
 module.exports = Any;
