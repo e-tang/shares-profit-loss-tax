@@ -115,7 +115,6 @@ class Brokers {
         }
     };
 
-    this.default = this.commsec;
 }
 
 module.exports = new Brokers();
