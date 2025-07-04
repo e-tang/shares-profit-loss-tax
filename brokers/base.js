@@ -556,6 +556,7 @@ class Broker {
         }
 
         let year = transaction.date.getFullYear();
+        trades.years = trades.years || new Set();
         trades.years.add(year);
         
         let transactions = null;

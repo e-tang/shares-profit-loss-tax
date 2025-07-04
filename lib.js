@@ -144,74 +144,77 @@ function processTradesWithRecords(trades, broker, options = {}) {
             }
         });
     } else {
-        symbols_array = Array.from(trades.symbols);
+        if (trades.symbols && trades.symbols instanceof Set)
+            symbols_array = Array.from(trades.symbols);
     }
 
-    // Process each symbol's transactions
-    symbols_array.forEach(function ([symbol, transactions]) {
-        if (symbols_to_ignore.has(symbol))
-            return;
-        
-        transactions.sort(transaction_sort);
-        broker.update_holding(portfolio, symbol, transactions, app_data);
-    });
-
-    // Determine years to process
-    const years_array = options.year > -1 ? [options.year] : Array.from(trades.years);
-    years_array.sort();
-    years_array.unshift(years_array[0] - 1);
-    
-    // Calculate financial year profits
-    const results = {
-        portfolio: portfolio,
-        trades: trades,
-        symbols_count: symbols_array.length,
-        first_trade: trades.first,
-        last_trade: trades.last,
-        years_traded: trades.years.size,
-        financial_years: {}
-    };
-
-    // Calculate for each financial year
-    years_array.forEach(function (year) {
-        const financial_year_pl = broker.calculate_financial_year_profit(
-            portfolio,
-            year,
-            {
-                details: options.details
-            }
-        );
-
-        if (financial_year_pl.total_trades === 0) {
-            return;
-        }
-
-        const financial_year_str = year + "-" + (year + 1);
-        results.financial_years[financial_year_str] = financial_year_pl;
-    });
-
-    // Calculate holdings summary
-    results.holdings = [];
-    results.remaining_cost = 0;
-    
-    portfolio.holdings.forEach(function (holding) {
-        if (holding.quantity > 0) {
-            const cost = holding.average_price * holding.quantity;
-            results.remaining_cost += cost;
+    if (symbols_array && symbols_array.length > 0) {
+        // Process each symbol's transactions
+        symbols_array.forEach(function ([symbol, transactions]) {
+            if (symbols_to_ignore.has(symbol))
+                return;
             
-            results.holdings.push({
-                symbol: holding.symbol,
-                quantity: holding.quantity,
-                average_price: holding.average_price,
-                cost: cost,
-                profit: holding.profit
-            });
-        }
-    });
+            transactions.sort(transaction_sort);
+            broker.update_holding(portfolio, symbol, transactions, app_data);
+        });
 
-    // Save portfolio if requested
-    if (options.save && options['portfolio-file']) {
-        fs.writeFileSync(options['portfolio-file'], JSON.stringify(portfolio, null, 4));
+        // Determine years to process
+        const years_array = options.year > -1 ? [options.year] : Array.from(trades.years);
+        years_array.sort();
+        years_array.unshift(years_array[0] - 1);
+        
+        // Calculate financial year profits
+        const results = {
+            portfolio: portfolio,
+            trades: trades,
+            symbols_count: symbols_array.length,
+            first_trade: trades.first,
+            last_trade: trades.last,
+            years_traded: trades.years.size,
+            financial_years: {}
+        };
+
+        // Calculate for each financial year
+        years_array.forEach(function (year) {
+            const financial_year_pl = broker.calculate_financial_year_profit(
+                portfolio,
+                year,
+                {
+                    details: options.details
+                }
+            );
+
+            if (financial_year_pl.total_trades === 0) {
+                return;
+            }
+
+            const financial_year_str = year + "-" + (year + 1);
+            results.financial_years[financial_year_str] = financial_year_pl;
+        });
+
+        // Calculate holdings summary
+        results.holdings = [];
+        results.remaining_cost = 0;
+        
+        portfolio.holdings.forEach(function (holding) {
+            if (holding.quantity > 0) {
+                const cost = holding.average_price * holding.quantity;
+                results.remaining_cost += cost;
+                
+                results.holdings.push({
+                    symbol: holding.symbol,
+                    quantity: holding.quantity,
+                    average_price: holding.average_price,
+                    cost: cost,
+                    profit: holding.profit
+                });
+            }
+        });
+
+        // Save portfolio if requested
+        if (options.save && options['portfolio-file']) {
+            fs.writeFileSync(options['portfolio-file'], JSON.stringify(portfolio, null, 4));
+        }
     }
 
     return results;
