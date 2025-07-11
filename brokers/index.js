@@ -45,7 +45,7 @@ const normalizeGenericData = (csvData) => {
 const identifyBroker = (csvContent) => {
     if (csvContent.includes("Code,Company,Date,Type,Quantity")) {
         return "commsec";
-    } else if (csvContent.includes("Date,Reference,Details,B/S,Quantity,Code,Price")) {
+    } else if (csvContent.includes("Date,Reference,Details")) {
         return "commsec"; // alternative commsec format
     } else if (csvContent.includes("ID,Date,Time,Account Code,Buy or Sell,Currency,Exchange,Stock,Volume,Price,Value")) {
         return "fpmarkets";
