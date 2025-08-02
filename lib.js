@@ -63,19 +63,28 @@ function processTrades(input, options = {}) {
     // Load trades
     let all_trades = new models.Trades();
 
+    let broker_name = "any";
+    if (!opts.broker) {
+        let csvContent = fs.readFileSync(input[0], "utf-8");
+        broker_name = brokers.identifyBroker(csvContent);
+    }
+    else
+        broker_name = opts.broker;
+
     // Input is a file path or array of file paths
     // Get broker
-    const broker = brokers.get_broker(opts.broker || null, opts);
+    const broker = brokers.get_broker(broker_name, opts);
     if (!broker) {
         throw new Error("Unsupported broker: " + (opts.broker || "not provided"));
     }
+    opts.broker = broker;
     
     // Handle string input (CSV content) or file paths
     if (typeof input === 'string' && (!Array.isArray(input) || input.includes('\n'))) {
         // Input is CSV content string
         trades = new models.Trades();
         // broker.load_content(trades, input, { index: 0, offset: 0 });
-        trades = normalizeData(input, opts.broker, {index: 0, offset: 0, ...opts});
+        trades = normalizeData(input, broker_name, {index: 0, offset: 0, ...opts});
     } else {
         /**
          * Load the broker's data from the CSV file.
@@ -103,7 +112,7 @@ function processTrades(input, options = {}) {
                     console.log("Loading transactions file: " + files[i])
                     let content = fs.readFileSync(files[i], 'utf8');
                     // let { count, trades } = this.load_content(trades, content, { index: total_count, offset: offset });
-                    let { count, trades } = brokers.normalizeData(content, opts.broker, {index: total_count, offset: offset, trades: all_trades, ...opts});
+                    let { count, trades } = brokers.normalizeData(content, broker_name, {index: total_count, offset: offset, trades: all_trades, ...opts});
                     total_count += count;
                     all_trades = trades;
                 }
@@ -134,6 +143,15 @@ function processTradesWithRecords(trades, broker, options = {}) {
     
     // Filter symbols if specified
     let symbols_array = null;
+    let results = {
+        portfolio: null,
+        trades: null,
+        symbols_count: 0,
+        first_trade: null,
+        last_trade: null,
+        years_traded: null,
+        financial_years: {}
+    };
     if (options.symbol && options.symbol.length > 0) {
         symbols_array = [];
         const symbols = typeof options.symbol === 'string' ? options.symbol.split(',') : options.symbol;
@@ -144,8 +162,14 @@ function processTradesWithRecords(trades, broker, options = {}) {
             }
         });
     } else {
-        if (trades.symbols && trades.symbols instanceof Set)
-            symbols_array = Array.from(trades.symbols);
+        if (trades.symbols) {
+            // if (trades.symbols instanceof Set)
+            //     symbols_array = Array.from(trades.symbols);
+            if (trades.symbols instanceof Map)
+                symbols_array = Array.from(trades.symbols.entries())
+            else
+                throw new Error("Bug!!! symbols_array are not a Map");
+        }
     }
 
     if (symbols_array && symbols_array.length > 0) {
@@ -164,15 +188,12 @@ function processTradesWithRecords(trades, broker, options = {}) {
         years_array.unshift(years_array[0] - 1);
         
         // Calculate financial year profits
-        const results = {
-            portfolio: portfolio,
-            trades: trades,
-            symbols_count: symbols_array.length,
-            first_trade: trades.first,
-            last_trade: trades.last,
-            years_traded: trades.years.size,
-            financial_years: {}
-        };
+        results.portfolio = portfolio;
+        results.trades = trades;
+        results.symbols_count = symbols_array.length;
+        results.first_trade = trades.first;
+        results.last_trade = trades.last;
+        results.years_traded = trades.years.size;
 
         // Calculate for each financial year
         years_array.forEach(function (year) {

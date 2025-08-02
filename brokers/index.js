@@ -10,8 +10,6 @@ const Any = require('./any');
 
 const models = require('../lib/models');
 
-// const commsec = new CommSec();
-
 const normalizeCommSecData = (csvData) => {
     return csvData.map(row => ({
         date: new Date(row['Date']),
@@ -77,7 +75,7 @@ class Brokers {
         }
 
         // Get broker instance
-        const broker = this.get_broker(identifiedBroker, options);
+        const broker = options.broker || this.get_broker(identifiedBroker, options);
         if (!broker) {
             throw new Error(`Unsupported broker: ${identifiedBroker || 'any (auto-detected)'}`);
         }
@@ -100,8 +98,15 @@ class Brokers {
 
     get_broker(name, options) {
         try {
-            if (!name || name.toLowerCase() === 'any')
+            if (!name || name.toLowerCase() === 'any') {
+                // make sure all the columns are here
+                // col-symbol
+                // col-date
+                // col-quantity
+                // col-price
+                // col-type
                 return new Any(options);
+            }
 
             const brokerInstance = this[name.toLowerCase()]; // Ensure lowercase access
             if (!brokerInstance) {
@@ -111,8 +116,8 @@ class Brokers {
             return brokerInstance;
         } catch (e) {
             console.error("Error: " + e.message);
-            return null;
         }
+        return null;
     };
 
 }
