@@ -37,6 +37,7 @@ class Broker {
         let total_cost = 0;
         let total_buy = 0;
         let total_sell = 0;
+        let total_symbols = new Map();  // symbol to profit/loss mapping
         let trade_profit_max = new models.Trade();
         let trade_loss_max = new models.Trade();
 
@@ -44,6 +45,11 @@ class Broker {
             let profits_year = holding.profits.get(year); // the list of profits for the year
 
             if (profits_year) {
+                let symbol_pl = {
+                    pl_period: profits_year
+                }
+                total_symbols.set(holding.symbol, symbol_pl);
+
                 let sub_discount = 0;
                 let sub_profit = 0;
                 let sub_profit_gain = 0;
@@ -88,6 +94,15 @@ class Broker {
                     sub_cost += profit.cost;
                 });
 
+                symbol_pl.total_pl = sub_profit;
+                symbol_pl.total_profit_gain = sub_profit_gain;
+                symbol_pl.total_profit_loss = sub_profit_loss;
+                symbol_pl.total_profit_trades = sub_profit_trades;
+                symbol_pl.total_loss_trades = sub_loss_trades;
+                symbol_pl.total_discount = sub_discount;
+                symbol_pl.total_trades = sub_trades;
+                symbol_pl.total_cost = sub_cost;
+
                 total_profit += sub_profit;
                 total_profit_gain += sub_profit_gain;
                 total_profit_loss += sub_profit_loss;
@@ -129,6 +144,7 @@ class Broker {
         financial_year.total_loss_trades = total_loss_trades;
         financial_year.trade_profit_max = trade_profit_max;
         financial_year.trade_loss_max = trade_loss_max;
+        financial_year.total_symbols = total_symbols;
         return financial_year;
     }
 
@@ -555,9 +571,9 @@ class Broker {
                 trades.last = transaction.date;
             }
 
-            let year = transaction.date.getFullYear();
-            trades.years = trades.years || new Set();
-            trades.years.add(year);
+            let period = transaction.date.getFullYear(); // Or other period logic
+            trades.periods = trades.periods || new Set();
+            trades.periods.add(period);
             
             let transactions = null;
             if (trades.symbols.has(transaction.symbol)) {

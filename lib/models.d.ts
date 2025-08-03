@@ -32,7 +32,7 @@ declare class Transaction {
  */
 declare class Trades {
     symbols: Map<string, any>;
-    years: Set<number>;
+    periods: Set<number>;   // Used for aggregation of years, months, or weeks.
     first: any;
     last: any;
 }

@@ -71,8 +71,8 @@ describe('Trades model', () => {
         
         expect(trades.symbols).toBeInstanceOf(Map);
         expect(trades.symbols.size).toBe(0);
-        expect(trades.years).toBeInstanceOf(Set);
-        expect(trades.years.size).toBe(0);
+        expect(trades.periods).toBeInstanceOf(Set);
+        expect(trades.periods.size).toBe(0);
         expect(trades.first).toBeNull();
         expect(trades.last).toBeNull();
     });

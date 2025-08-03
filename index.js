@@ -94,9 +94,9 @@ symbols_array.forEach(function ([symbol, transactions]) {
 console.log("Total symbols traded: " + /* trades.symbols.size */symbols_array.length);
 console.log("First trade: " + trades.first);
 console.log("Last trade: " + trades.last);
-console.log("Years traded: " + trades.years.size);
+console.log("Periods traded: " + trades.periods.size);
 
-let years_array = opts.year > -1 ? [opts.year] : Array.from(trades.years);
+let years_array = opts.year > -1 ? [opts.year] : Array.from(trades.periods);
 
 years_array.sort();
 years_array.unshift(years_array[0] - 1);

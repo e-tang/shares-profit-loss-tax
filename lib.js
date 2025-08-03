@@ -90,7 +90,7 @@ function processTrades(input, options = {}) {
          * Load the broker's data from the CSV file.
          */
         function load (files, offset, options) {
-            console.log(`Loading ${this.name} data...`);
+            console.log(`Loading ${broker_name} data...`);
             if (!options && typeof offset == 'object') {
                 options = offset;
                 offset = 0;
@@ -149,7 +149,7 @@ function processTradesWithRecords(trades, broker, options = {}) {
         symbols_count: 0,
         first_trade: null,
         last_trade: null,
-        years_traded: null,
+        periods_traded: null,
         financial_years: {}
     };
     if (options.symbol && options.symbol.length > 0) {
@@ -183,7 +183,7 @@ function processTradesWithRecords(trades, broker, options = {}) {
         });
 
         // Determine years to process
-        const years_array = options.year > -1 ? [options.year] : Array.from(trades.years);
+        const years_array = options.year > -1 ? [options.year] : Array.from(trades.periods);
         years_array.sort();
         years_array.unshift(years_array[0] - 1);
         
@@ -193,7 +193,7 @@ function processTradesWithRecords(trades, broker, options = {}) {
         results.symbols_count = symbols_array.length;
         results.first_trade = trades.first;
         results.last_trade = trades.last;
-        results.years_traded = trades.years.size;
+        results.periods_traded = trades.periods.size;
 
         // Calculate for each financial year
         years_array.forEach(function (year) {
