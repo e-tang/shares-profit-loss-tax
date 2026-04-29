@@ -30,6 +30,7 @@ const params = new Params({
     "col-currency": null,
     "adjust-transaction": true,
     "price-unit": 0.01,
+    "sort-by": "pl", // symbol, etc
 });
 
 const opts = params.getOpts();
@@ -49,20 +50,21 @@ try {
     console.log("Total symbols traded: " + results.symbols_count);
     console.log("First trade: " + results.first_trade);
     console.log("Last trade: " + results.last_trade);
-    console.log("Years traded: " + results.years_traded);
+    console.log("Years traded: " + results.trades.periods.size);
     
-    console.log("==============================");
+    console.log("===========================================");
     
     // Display financial year results
     Object.entries(results.financial_years).forEach(([yearStr, financial_year_pl]) => {
-        console.log("==============================");
+        console.log(`================  ${yearStr}  ==============`);
         console.log("Computing profit / loss for financial year: " + yearStr);
         
-        console.log("Total profit / loss: " + financial_year_pl.profit);
-        console.log("Total cost: " + financial_year_pl.total_cost);
+        console.log("Total profit / loss: " + financial_year_pl.profit.toFixed(2));
+        console.log("Total cost: " + financial_year_pl.total_cost.toFixed(2));
         console.log("Total profit eligible for discount: " + financial_year_pl.profit_discount);
-        console.log("Total buy (inc. brokerage): " + financial_year_pl.total_buy);
-        console.log("Total sell (inc. brokerage): " + financial_year_pl.total_sell);
+        console.log("Total buy (inc. brokerage): " + financial_year_pl.total_buy.toFixed(2));
+        console.log("Total sell (inc. brokerage): " + financial_year_pl.total_sell.toFixed(2));
+        console.log("Total symbols traded: " + financial_year_pl.total_symbols.size);
         console.log("Total trades: " + financial_year_pl.total_trades);
         console.log();
         console.log("Cumulative profit: " + financial_year_pl.total_profit_gain);
@@ -74,15 +76,28 @@ try {
         console.log("Biggest winning trade: " + financial_year_pl.trade_profit_max.toString());
         console.log("Biggest losing trade: " + financial_year_pl.trade_loss_max.toString());
         console.log();
+
+        // Now show the P/L for each symbol
+        console.log("");
+        console.log("=============================================");
+        // results.holdings.forEach(function (holding) {
+        //     console.log((holding.symbol || "") + "> P/L:" + holding.profit.toFixed(2));
+        // });
+        if (opts["sort-by"] == "pl") {
+            const sortedSymbols = Array.from(financial_year_pl.total_symbols.entries()).sort(
+                (a, b) => b[1].total_pl - a[1].total_pl
+            );
+            sortedSymbols.forEach(([symbol, symbol_pl]) => {
+                console.log((symbol || "") + "> P/L:" + symbol_pl.total_pl.toFixed(2));
+            });
+        }
+        else {
+            financial_year_pl.total_symbols.forEach((symbol_pl, symbol) => {
+                console.log((symbol || "") + "> P/L:" + symbol_pl.total_pl.toFixed(2));
+            });
+        }
+        console.log("");        
     });
-    
-    // Now show the P/L for each symbol
-    console.log("");
-    console.log("==============================");
-    results.holdings.forEach(function (holding) {
-        console.log((holding.symbol || "") + "> P/L:" + holding.profit.toFixed(2));
-    });
-    console.log("");
     
     // Now show the current portfolio
     console.log();

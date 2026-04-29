@@ -64,7 +64,7 @@ const mockCommSecBroker = {
         // Add transactions to trades
         trades.symbols.set('CBA', [cba1, cba2]);
         trades.symbols.set('NAB', [nab1, nab2]);
-        trades.years.add(2023);
+        trades.periods.add(2023);
         trades.first = cba1.date;
         trades.last = nab2.date;
         
@@ -111,7 +111,7 @@ describe('Integration tests', () => {
         // Verify basic structure
         expect(results).toBeDefined();
         expect(results.symbols_count).toBe(2); // CBA and NAB
-        expect(results.years_traded).toBe(1); // 2023
+        expect(results.periods_traded).toBe(1); // 2023
         
         // Verify financial years
         expect(Object.keys(results.financial_years)).toContain('2022-2023');
@@ -146,7 +146,7 @@ describe('Integration tests', () => {
         // Verify basic structure
         expect(results).toBeDefined();
         expect(results.symbols_count).toBe(2); // CBA and NAB
-        expect(results.years_traded).toBe(1); // 2023
+        expect(results.periods_traded).toBe(1); // 2023
         
         // Verify financial years
         expect(Object.keys(results.financial_years)).toContain('2022-2023');

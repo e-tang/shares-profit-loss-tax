@@ -1,5 +1,5 @@
 # shares-profit-loss-tax
-Shares PROfit / LOSs TAx (SPROLOSTA or sprolosta) is a profit / loss calculator for stock trading in Australia.
+Shares PROfit / LOSs TAx (SPROLOSTA or sprolosta) is a profit / loss calculator for trading. Although it is initially designed to help Australian stock traders calculate their profit and loss for tax purposes, specifically for the Australian financial year (July 1 to June 30), it can be used by traders in other countries as well.
 
 It is coded in nodejs and can be used for computing the profit / loss of stock trading for each financial year. And the profit for any assets that are held more than 12 months is entitled to a 50% discount.
 

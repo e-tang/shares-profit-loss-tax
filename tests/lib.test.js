@@ -46,7 +46,7 @@ const mockBroker = {
         
         // Add transactions to trades
         trades.symbols.set('CBA', [buyTransaction, sellTransaction]);
-        trades.years.add(2023);
+        trades.periods.add(2023);
         trades.first = buyTransaction.date;
         trades.last = sellTransaction.date;
         
@@ -83,7 +83,7 @@ describe('processTrades function', () => {
         expect(results.symbols_count).toBeDefined();
         expect(results.first_trade).toBeInstanceOf(Date);
         expect(results.last_trade).toBeInstanceOf(Date);
-        expect(results.years_traded).toBeDefined();
+        expect(results.periods_traded).toBeDefined();
         expect(results.financial_years).toBeDefined();
     });
     
@@ -159,7 +159,7 @@ describe('processTradesWithRecords function', () => {
         
         // Add transactions to trades
         trades.symbols.set('CBA', [buyTransaction, sellTransaction]);
-        trades.years.add(2023);
+        trades.periods.add(2023);
         trades.first = buyTransaction.date;
         trades.last = sellTransaction.date;
         
@@ -192,7 +192,7 @@ describe('processTradesWithRecords function', () => {
         
         trades.symbols.set('CBA', [cba1]);
         trades.symbols.set('NAB', [nab1]);
-        trades.years.add(2023);
+        trades.periods.add(2023);
         
         const broker = require('../brokers').get_broker('mock');
         
@@ -223,7 +223,7 @@ describe('processTradesWithRecords function', () => {
         
         trades.symbols.set('CBA', [cba1]);
         trades.symbols.set('NAB', [nab1]);
-        trades.years.add(2023);
+        trades.periods.add(2023);
         
         const broker = require('../brokers').get_broker('mock');
         
