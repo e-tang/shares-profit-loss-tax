@@ -8,8 +8,6 @@
 const Broker = require('./base');
 
 const util = require('util');
-const fs = require('fs');
-
 const models = require('../lib/models');
 
 function FPMarkets(options) {
