@@ -179,10 +179,7 @@ class Broker {
 
         while(last_transaction) {
             if (last_transaction.type == transaction.type) {
-                console.error("The last transaction is the same type as the current transaction");
-                console.error("Last transaction: " + JSON.stringify(last_transaction));
-                console.error("Current transaction: " + JSON.stringify(transaction));
-                process.exit(1);
+                throw new Error("The last transaction is the same type as the current transaction. Last transaction: " + JSON.stringify(last_transaction) + ". Current transaction: " + JSON.stringify(transaction));
             }
             
             acquired_quantity += (last_transaction.quantity);
@@ -328,8 +325,7 @@ class Broker {
         else if (acquired_quantity_abs > quantity_target) {
             // position partially closed
             if (!last_transaction) {
-                console.error("No last transaction");
-                process.exit(1);
+                throw new Error("No last transaction");
             }
             // keep the average price
             // holding.average_price = last_transaction.price;
@@ -393,8 +389,7 @@ class Broker {
                     trade_value.sell += transaction.total;
                 }
                 else {
-                    console.error("Unknown transaction type: " + transaction.type);
-                    process.exit(1);
+                    throw new Error("Unknown transaction type: " + transaction.type);
                 }
             }
             else {
@@ -405,8 +400,7 @@ class Broker {
                     trade_value.sell += transaction.price * transaction.quantity;
                 }
                 else {
-                    console.error("Unknown transaction type: " + transaction.type);
-                    process.exit(1);
+                    throw new Error("Unknown transaction type: " + transaction.type);
                 }
             }
 
@@ -450,8 +444,7 @@ class Broker {
                         // console.debug("Average price now: " + holding.average_price)
                     }
                     if (holding.average_price < 0) {
-                        console.error("Average price is negative: " + holding.average_price);
-                        process.exit(1);
+                        throw new Error("Average price is negative: " + holding.average_price);
                     }
 
                     holding.records.push(transaction);

@@ -135,15 +135,30 @@ CBA,21/05/2023,23/05/2023,SELL,COMMONWEALTH BANK OF,100,105.00,10500.00,19.95,2.
     
     test('should save portfolio if save option is true', () => {
         const fs = require('fs');
-        
+
         sprolosta.processTrades(['test-data.csv'], {
             broker: 'mock',
             save: true,
             'portfolio-file': 'test-portfolio.json'
         });
-        
+
         expect(fs.writeFileSync).toHaveBeenCalled();
         expect(fs.writeFileSync.mock.calls[0][0]).toBe('test-portfolio.json');
+    });
+
+    test('should not kill the host process when a file does not exist (library must not process.exit)', () => {
+        const fs = require('fs');
+        fs.existsSync.mockReturnValueOnce(false);
+
+        // The per-file try/catch in lib.js's load() must catch the thrown
+        // "File not found" error and continue, rather than the library
+        // calling process.exit(1) and taking down the whole host process.
+        // Proof the process survives: this assertion runs at all.
+        expect(() => {
+            sprolosta.processTrades(['missing-file.csv'], {
+                broker: 'mock'
+            });
+        }).not.toThrow();
     });
 });
 

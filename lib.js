@@ -106,8 +106,7 @@ function processTrades(input, options = {}) {
             for (let i = 0; i < files.length; i++) {
                 try {
                     if (!fs.existsSync(files[i])) {
-                        console.error("File not found: " + files[i]);
-                        process.exit(1);
+                        throw new Error("File not found: " + files[i]);
                     }
                     console.log("Loading transactions file: " + files[i])
                     let content = fs.readFileSync(files[i], 'utf8');

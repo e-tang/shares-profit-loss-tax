@@ -149,3 +149,90 @@ describe('Broker base class', () => {
         expect(result.total_sell).toBe(10500);
     });
 });
+
+describe('Broker base class - malformed data must throw, never process.exit (library must not kill the host process)', () => {
+    let broker;
+
+    beforeEach(() => {
+        broker = new Broker();
+    });
+
+    test('update_holding should throw (not exit) for a transaction whose type is not buy/sell, when transaction.total is set', () => {
+        const portfolio = new models.Portfolio();
+
+        const badTransaction = new models.Transaction();
+        badTransaction.type = 'dividend';
+        badTransaction.symbol = 'CBA';
+        badTransaction.quantity = 100;
+        badTransaction.price = 1;
+        badTransaction.value = 100;
+        badTransaction.total = 100; // truthy -> hits the transaction.total branch
+
+        expect(() => {
+            broker.update_holding(portfolio, 'CBA', [badTransaction], null);
+        }).toThrow(/Unknown transaction type: dividend/);
+    });
+
+    test('update_holding should throw (not exit) for a transaction whose type is not buy/sell, when transaction.total is not set', () => {
+        const portfolio = new models.Portfolio();
+
+        const badTransaction = new models.Transaction();
+        badTransaction.type = 'dividend';
+        badTransaction.symbol = 'CBA';
+        badTransaction.quantity = 100;
+        badTransaction.price = 1;
+        badTransaction.value = 100;
+        badTransaction.total = 0; // falsy -> hits the "no total" branch
+
+        expect(() => {
+            broker.update_holding(portfolio, 'CBA', [badTransaction], null);
+        }).toThrow(/Unknown transaction type: dividend/);
+    });
+
+    test('calculate_profit should throw (not exit) when the last transaction has the same type as the closing transaction', () => {
+        const holding = new models.Holding();
+        holding.average_price = 100;
+
+        const lastTransaction = new models.Transaction();
+        lastTransaction.type = 'buy';
+        lastTransaction.quantity = 10;
+        lastTransaction.date = new Date('2023-01-01');
+        holding.records = [lastTransaction];
+
+        const closingTransaction = new models.Transaction();
+        closingTransaction.type = 'buy'; // same type as lastTransaction -> malformed data (should be a sell)
+        closingTransaction.quantity = -10;
+        closingTransaction.date = new Date('2023-06-01');
+
+        expect(() => {
+            broker.calculate_profit(holding, closingTransaction, 2023);
+        }).toThrow(/The last transaction is the same type as the current transaction/);
+    });
+
+    test('update_holding should throw (not exit) when the computed average price goes negative', () => {
+        const portfolio = new models.Portfolio();
+
+        const openingTransaction = new models.Transaction();
+        openingTransaction.type = 'buy';
+        openingTransaction.symbol = 'CBA';
+        openingTransaction.quantity = 10;
+        openingTransaction.price = 10;
+        openingTransaction.value = 100;
+        openingTransaction.total = 100;
+        broker.update_holding(portfolio, 'CBA', [openingTransaction], null);
+
+        // A corrupted/malformed row with a wildly negative total for a "buy"
+        // drives the recomputed average price negative.
+        const malformedTransaction = new models.Transaction();
+        malformedTransaction.type = 'buy';
+        malformedTransaction.symbol = 'CBA';
+        malformedTransaction.quantity = 5;
+        malformedTransaction.price = -200;
+        malformedTransaction.value = -1000;
+        malformedTransaction.total = -1000;
+
+        expect(() => {
+            broker.update_holding(portfolio, 'CBA', [malformedTransaction], null);
+        }).toThrow(/Average price is negative/);
+    });
+});
