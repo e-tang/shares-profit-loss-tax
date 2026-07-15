@@ -14,7 +14,7 @@ This project is a Node.js application (sprolosta) that calculates profit/loss of
 - **Naming**: Use camelCase for variables/functions, PascalCase for classes/constructors
 - **Imports**: Use CommonJS require system (e.g., `const models = require('./lib/models')`)
 - **Models**: Define model objects in lib/models.js
-- **Error Handling**: Use console.error for errors and process.exit(1) for critical failures
+- **Error Handling**: Library code (lib/, brokers/) must THROW Error on failures — never process.exit, which would kill host processes embedding this engine (e.g. the sprolo2 web server). process.exit(1) is acceptable only in cli.js entry-point code.
 - **Broker Implementations**: Extend base broker class in brokers/base.js for new broker support
 - **Function Documentation**: Use JSDoc style comments for function documentation
 - **Data Structure**: Use Maps and Sets for collections where appropriate
