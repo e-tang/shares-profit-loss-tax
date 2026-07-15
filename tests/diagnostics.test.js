@@ -8,25 +8,42 @@ describe('parse diagnostics', () => {
         'BHP,BHP GROUP LIMITED,20/03/2024,SELL,100,45.00,4500.00,19.95,1.81,C124,-4480.05',
     ].join('\n');
 
+    const CLEAN_CSV = [
+        'Code,Company,Date,Type,Quantity,Unit Price ($),Trade Value ($),Brokerage+GST ($),GST ($),Contract Note,Total Value ($)',
+        'BHP,BHP GROUP LIMITED,15/01/2023,BUY,100,40.00,4000.00,19.95,1.81,C123,4019.95',
+        'BHP,BHP GROUP LIMITED,20/03/2024,SELL,100,45.00,4500.00,19.95,1.81,C124,-4480.05',
+    ].join('\n');
+
     test('collects skipped lines when a diagnostics array is provided', () => {
         const diagnostics = [];
         const result = brokers.normalizeData(CSV, 'commsec', { diagnostics });
-        // NOTE: `count` counts every data line ATTEMPTED (including skipped/garbage
-        // lines), not just successfully parsed transactions -- this matches today's
-        // pre-existing observable behavior in load_content_common (verified via
-        // scratch check against the after-2023 CommSec format, which already has a
-        // null-returning branch). 3 data lines are attempted here: 1 valid, 1
-        // garbage, 1 valid.
+        // NOTE: `count` counts every data line ATTEMPTED (including skipped
+        // lines), not just successfully parsed transactions -- `++count` is
+        // evaluated in the argument list before line_to_transaction runs, so
+        // even a line whose parse throws has already bumped it. This matches
+        // today's pre-existing observable behavior in load_content_common.
+        // 3 data lines are attempted here: 1 valid, 1 garbage, 1 valid.
         expect(result.count).toBe(3);
         expect(diagnostics.length).toBe(1);
         expect(diagnostics[0]).toMatchObject({ raw: expect.stringContaining('GARBAGE') });
         expect(typeof diagnostics[0].line).toBe('number');
-        expect(diagnostics[0].reason).toBe('not-a-transaction');
+        // The garbage line makes CommSec's field parsing throw (fields[2] is
+        // undefined on a comma-less line), which is reported as a parse-error
+        // -- distinct from the 'not-a-transaction' reason used when
+        // line_to_transaction returns falsy without throwing.
+        expect(diagnostics[0].reason).toMatch(/^parse-error/);
     });
 
-    test('no diagnostics option — behavior unchanged', () => {
-        const result = brokers.normalizeData(CSV, 'commsec', {});
-        expect(result.count).toBe(3);
+    test('no diagnostics option — corrupt line still fails loudly (legacy behavior)', () => {
+        // Without a collector, nobody can surface skipped lines to the user
+        // (e.g. the anonymous calculate flow), so a corrupt line must keep
+        // throwing rather than being silently dropped from the calculation.
+        expect(() => brokers.normalizeData(CSV, 'commsec', {})).toThrow();
+    });
+
+    test('no diagnostics option — behavior unchanged on clean input', () => {
+        const result = brokers.normalizeData(CLEAN_CSV, 'commsec', {});
+        expect(result.count).toBe(2);
     });
 
     test('unrecognized content reports no-data-header-recognized when collector present', () => {

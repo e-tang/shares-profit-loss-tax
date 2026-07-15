@@ -561,10 +561,21 @@ class Broker {
             try {
                 transaction = this.line_to_transaction(fields, (++count) + index);
             } catch (e) {
-                // some lines are simply not parseable as transactions
-                // (e.g. garbage/free-text rows mixed into an export); treat
-                // the same as a falsy return from line_to_transaction below
-                transaction = null;
+                // Only swallow line parse errors when the caller provided a
+                // diagnostics collector (e.g. the import-preview flow, which
+                // can show skipped lines to the user). Without a collector,
+                // rethrow -- legacy callers (e.g. the anonymous calculate
+                // flow) must keep failing loudly rather than silently losing
+                // rows from the tax calculation.
+                if (!Array.isArray(options.diagnostics)) {
+                    throw e;
+                }
+                options.diagnostics.push({
+                    line: j + 1 + (options.offset || 0),
+                    raw: line,
+                    reason: 'parse-error: ' + e.message,
+                });
+                continue;
             }
             if (!transaction) {
                 // not all CVS lines are transactions
