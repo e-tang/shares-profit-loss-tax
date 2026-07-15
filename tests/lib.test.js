@@ -52,7 +52,14 @@ const mockBroker = {
         
         return trades;
     }),
-    load_content: jest.fn(() => 2),
+    // Real brokers.normalizeData() calls broker.load_content(trades, content, options)
+    // and returns its result directly (see brokers/index.js). The real
+    // Broker.load_content_common() returns { count, trades } (see brokers/base.js),
+    // so the mock must return that same shape rather than a bare number.
+    load_content: jest.fn(() => {
+        const trades = mockBroker.load();
+        return { count: 2, trades };
+    }),
     update_holding: jest.fn(),
     calculate_financial_year_profit: jest.fn(() => {
         const financialYear = new models.FinancialYear();
@@ -66,8 +73,21 @@ const mockBroker = {
     })
 };
 
+// brokers/index.js exports `new Brokers()` - a class instance whose
+// normalizeData()/get_broker()/identifyBroker() live on the prototype (or are
+// assigned in the constructor). lib.js calls brokers.normalizeData(...) and
+// brokers.identifyBroker(...) directly, so the mock must provide those too,
+// not just get_broker().
 jest.mock('../brokers', () => ({
-    get_broker: jest.fn(() => mockBroker)
+    get_broker: jest.fn(() => mockBroker),
+    identifyBroker: jest.fn(() => 'mock'),
+    // Mirrors Brokers.prototype.normalizeData(): resolve the broker instance
+    // and delegate to its load_content(), returning the result as-is.
+    normalizeData: jest.fn((csvContent, brokerName, options) => {
+        options = options || {};
+        const broker = options.broker || mockBroker;
+        return broker.load_content(options.trades || new (require('../lib/models').Trades)(), csvContent, options);
+    })
 }));
 
 describe('processTrades function', () => {
