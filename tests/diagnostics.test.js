@@ -31,6 +31,12 @@ describe('parse diagnostics', () => {
         // undefined on a comma-less line), which is reported as a parse-error
         // -- distinct from the 'not-a-transaction' reason used when
         // line_to_transaction returns falsy without throwing.
+        // NOTE: the 'not-a-transaction' falsy-return path isn't triggerable
+        // via CommSec fixtures that reach this data-line stage (its parsers
+        // throw rather than return falsy on bad rows, apart from the
+        // after-2023 handler's non-B/S rows which need that format's header);
+        // it is exercised implicitly by brokers whose line_to_transaction
+        // returns null for non-trade rows.
         expect(diagnostics[0].reason).toMatch(/^parse-error/);
     });
 

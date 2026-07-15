@@ -521,6 +521,21 @@ class Broker {
         throw new Error("Func (line_to_transaction) is Not implemented");
     }
 
+    /**
+     * Parse CSV content into trades using broker-specific line handling.
+     * @param {Trades} [trades] - existing trades container to append to (a new one is created if omitted)
+     * @param {string} content - raw CSV content
+     * @param {Object} options
+     * @param {number} [options.index=0] - starting transaction id offset
+     * @param {number} [options.offset=0] - lines to skip at the start of content;
+     *   also added to reported diagnostic line numbers so they stay file-global
+     * @param {Array<{line: number, raw: string, reason: string}>} [options.diagnostics]
+     *   When present, unparseable lines are collected here instead of throwing.
+     *   Reasons: 'parse-error: <msg>' (line_to_transaction threw),
+     *   'not-a-transaction' (falsy return), 'no-data-header-recognized' (nothing parsed).
+     *   When ABSENT, parse exceptions propagate (legacy fail-loud behavior).
+     * @returns {{count: number, trades: Trades}} count includes attempted (even skipped) data lines
+     */
     load_content_common(trades, content, options) {
         trades = trades || new models.Trades();
         let { index, offset } = options;
@@ -578,7 +593,7 @@ class Broker {
                 continue;
             }
             if (!transaction) {
-                // not all CVS lines are transactions
+                // not all CSV lines are transactions
                 // e.g. the transaction records downloaded from the CommSec website
                 if (Array.isArray(options.diagnostics)) {
                     options.diagnostics.push({
