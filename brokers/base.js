@@ -557,10 +557,25 @@ class Broker {
                 }
             });
 
-            let transaction = this.line_to_transaction(fields, (++count) + index);
+            let transaction;
+            try {
+                transaction = this.line_to_transaction(fields, (++count) + index);
+            } catch (e) {
+                // some lines are simply not parseable as transactions
+                // (e.g. garbage/free-text rows mixed into an export); treat
+                // the same as a falsy return from line_to_transaction below
+                transaction = null;
+            }
             if (!transaction) {
                 // not all CVS lines are transactions
                 // e.g. the transaction records downloaded from the CommSec website
+                if (Array.isArray(options.diagnostics)) {
+                    options.diagnostics.push({
+                        line: j + 1 + (options.offset || 0),
+                        raw: line,
+                        reason: 'not-a-transaction',
+                    });
+                }
                 continue;
             }
 
@@ -586,6 +601,11 @@ class Broker {
 
             transactions.push(transaction);
         }
+
+        if (Array.isArray(options.diagnostics) && count === 0 && !start) {
+            options.diagnostics.push({ line: 0, raw: '', reason: 'no-data-header-recognized' });
+        }
+
         return {
             count: count,
             trades
