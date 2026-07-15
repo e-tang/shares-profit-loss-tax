@@ -6,6 +6,7 @@
 const brokers = require('./brokers');
 const models = require('./lib/models');
 const utils = require('./lib/utils');
+const { calculateIncome } = require('./lib/income');
 const fs = require('fs');
 const app_data = require('./data');
 
@@ -243,6 +244,7 @@ function processTradesWithRecords(trades, broker, options = {}) {
 module.exports = {
     processTrades,
     processTradesWithRecords,
+    calculateIncome,
     models,
     utils,
     brokers
