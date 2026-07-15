@@ -254,34 +254,14 @@ class Broker {
             // now check if the asset hold more than 12 months
             // if so, then there is discount for the capital gain
             // worry about the discount only if there is profit
+            // ATO CGT discount: held STRICTLY more than 12 months — disposal must fall
+            // strictly after the first anniversary of the parcel's acquisition.
+            // setFullYear on Feb-29 rolls to Mar-1 in non-leap years: conservative
+            // (denies the discount on the ambiguous leap-day anniversary), documented.
             if (profit_num > 0) {
-                let year = last_transaction.date.getFullYear();
-                let close_year = transaction.date.getFullYear();
-                if (year != close_year) {
-                    if (close_year - year > 1) {
-                        profit.discount_eligible = true;
-                    }
-                    else {
-                        let month = last_transaction.date.getMonth();
-                        let close_month = transaction.date.getMonth();
-                        if (month <= close_month) {
-
-                            if ((close_month - month) > 1) {
-                                profit.discount_eligible = true;
-                            }
-                            else {
-                                let day = last_transaction.date.getDate();
-                                let close_day = transaction.date.getDate();
-
-                                if (day <= close_day) {
-                                    // the asset is hold more than 12 months
-                                    profit.discount_eligible = true;
-                                    // profit.discount_quantity += last_transaction.quantity;
-                                }
-                            }
-                        }
-                    }
-                }
+                const anniversary = new Date(last_transaction.date.getTime());
+                anniversary.setFullYear(anniversary.getFullYear() + 1);
+                profit.discount_eligible = transaction.date > anniversary;
             }
 
             if (acquired_quantity_abs >= quantity_target) {
