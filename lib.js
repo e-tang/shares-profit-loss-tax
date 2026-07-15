@@ -82,9 +82,9 @@ function processTrades(input, options = {}) {
     // Handle string input (CSV content) or file paths
     if (typeof input === 'string' && (!Array.isArray(input) || input.includes('\n'))) {
         // Input is CSV content string
-        trades = new models.Trades();
         // broker.load_content(trades, input, { index: 0, offset: 0 });
-        trades = normalizeData(input, broker_name, {index: 0, offset: 0, ...opts});
+        let { trades } = brokers.normalizeData(input, broker_name, {index: 0, offset: 0, trades: all_trades, ...opts});
+        all_trades = trades;
     } else {
         /**
          * Load the broker's data from the CSV file.
