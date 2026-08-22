@@ -1,0 +1,17 @@
+﻿F11.1  EXCHANGE RATES
+Title,A$1=USD
+Description,AUD/USD Exchange Rate; see notes for further detail.
+Frequency,Daily
+Type,Indicative
+Units,USD
+
+Source,WM/Reuters
+Publication date,04-Aug-2025
+Series ID,FXRUSD
+01-Jul-2025,0.6500
+02-Jul-2025,0.5000
+03-Jul-2025,0.6000
+01-Aug-2025,0.7000
+01-Sep-2025,0.7500
+02-Sep-2025,0.8000
+03-Sep-2025,0.8100

@@ -62,9 +62,14 @@ is marked unknown, and its share of a later disposal is excluded. This prevents
 missing funding or an unpriced crypto deposit from being treated as zero-cost
 profit.
 
-Binance results are reported in **USDT**, not AUD. They represent trading P/L
-for complete USDT-quoted pairs, not a complete Australian crypto CGT schedule,
-and are never placed in the share CGT-discount bucket.
+Without an FX file, Binance results are reported in **USDT**. For an Australian
+tax worksheet, pass the RBA F11.1 daily exchange-rate CSV with `--fx-rates`.
+SPROLOSTA then converts every matched acquisition cost and disposal proceeds
+separately using `AUD = USDT / FXRUSD`. It uses the latest published observation
+on or before the transaction date, which covers weekends and RBA holidays.
+This method treats 1 USDT as 1 USD and records both the AUD calculation and its
+USDT reconciliation. Binance results are never placed in the share CGT-discount
+bucket.
 
 ### Other brokers and generic CSV files
 
@@ -138,13 +143,23 @@ The files do not need to be passed chronologically; transactions are sorted by d
 ### Binance transaction history
 
 ```bash
-sprolosta --broker binance --save false --year 2025 Binance-Transaction-History.csv
+sprolosta \
+  --broker binance \
+  --save false \
+  --year 2025 \
+  --fx-rates RBA-F11.1-data.csv \
+  Binance-Transaction-History.csv
 ```
 
 `--year 2025` selects the 2025–2026 Australian financial year. When Binance
 produces several `partN-ofN` files, pass every non-overlapping part to the same
 command. Parts may be passed in any order because ledger rows are sorted before
 pair reconstruction.
+
+Download the RBA `Exchange Rates – Daily – 2023 to Current` F11.1 CSV from the
+[RBA historical data page](https://www.rba.gov.au/statistics/historical-data.html).
+Keep the exact source file or a documented subset of every observation used
+with the calculation records.
 
 ### Selected symbols
 
@@ -212,6 +227,7 @@ Commission, fee, and tax columns are parsed but are not currently added to `tota
 | `--save` | `true` in the CLI | Write the calculated portfolio JSON |
 | `--portfolio-file` | `portfolio.json` | Portfolio output path used by `--save` |
 | `--year` | all | Starting year of the Australian financial year |
+| `--fx-rates` | none | RBA F11.1 CSV used to convert Binance USDT legs to AUD |
 | `--details` | `false` | Print per-symbol calculation details |
 | `--symbol` | all | Comma-separated symbols to include |
 | `--ignore` | none | Symbol to skip |
@@ -235,11 +251,12 @@ The report contains:
 
 For FP Markets cTrader input, the report also shows closed-position count, gross trading P/L, commission, and swaps. Buy/sell turnover and portfolio cost remain zero because the export does not provide account-currency transaction values and contains only closed positions.
 
-For Binance input, the report shows complete-pair count, reporting currency,
-ignored funding/transfer records, and ignored cross-crypto conversions. `Total
-buy` is paired USDT cost and `Total sell` is paired USDT proceeds displayed as
-a negative number. Unmatched quantities are exposed in the library result for
-reconciliation.
+For Binance input, the report shows complete-pair count, reporting and quote
+currencies, the USDT reconciliation, FX source and method, ignored
+funding/transfer records, and ignored cross-crypto conversions. With
+`--fx-rates`, `Total buy`, `Total sell`, profit and per-symbol P/L are AUD.
+Unmatched quantities and the exact RBA observations used are exposed in the
+library result for reconciliation.
 
 Because eligible gains are reported separately, the program's total pre-discount realised result is generally:
 
@@ -267,8 +284,10 @@ Do not simply halve the eligible figure to prepare a tax return. Capital losses,
   P/L.
 - Binance fee currencies other than the traded asset or USDT are rejected
   because this export does not provide a USDT value for those fees.
-- Binance results remain denominated in USDT. Converting them to an AUD tax
-  result requires an independently supportable AUD valuation method.
+- Binance AUD conversion assumes 1 USDT equals 1 USD, then applies the RBA
+  F11.1 FXRUSD observation on the transaction date or the latest prior
+  published date. Keep the source rates and review whether that stablecoin
+  approximation is appropriate for the intended tax treatment.
 
 ## Library usage
 

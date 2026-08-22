@@ -11,6 +11,8 @@
 const Broker = require('./base');
 const models = require('../lib/models');
 const utils = require('../lib/utils');
+const RbaUsdAudRates = require('../lib/rba-fx');
+const fs = require('fs');
 
 const HEADER = 'User ID,Time,Account,Operation,Coin,Change,Remark';
 const EPSILON = 1e-12;
@@ -46,8 +48,16 @@ function parseCsvLine(line) {
 class Binance extends Broker {
     constructor(options) {
         super(options);
+        options = options || {};
         this.name = 'Binance';
         this.quote_currency = 'USDT';
+        this.reporting_currency = 'USDT';
+        this.fx_rates = null;
+        this.fx_rates_file = options['fx-rates'] || null;
+        if (this.fx_rates_file) {
+            this.fx_rates = new RbaUsdAudRates(fs.readFileSync(this.fx_rates_file, 'utf8'));
+            this.reporting_currency = 'AUD';
+        }
         this._ledgerRows = [];
         this.stats = this.newStats();
     }
@@ -60,7 +70,16 @@ class Binance extends Broker {
             ignored_cross_crypto_conversions: 0,
             unmatched_disposal_quantity: new Map(),
             quote_currency: this.quote_currency,
+            reporting_currency: this.reporting_currency,
+            used_fx_rates: new Map(),
         };
+    }
+
+    convertQuote(amount, date) {
+        if (!this.fx_rates) {
+            return { amount, rate: null };
+        }
+        return this.fx_rates.usdToAud(amount, date);
     }
 
     parseDateTime(value) {
@@ -138,21 +157,31 @@ class Binance extends Broker {
         const lots = new Map();
         let transactionId = 0;
 
-        const addLot = (coin, quantity, cost, date, known = true) => {
+        const addLot = (coin, quantity, quoteCost, date, known = true) => {
             if (quantity <= EPSILON) {
                 return;
             }
             if (!lots.has(coin)) {
                 lots.set(coin, []);
             }
-            lots.get(coin).push({ quantity, cost, date, known });
+            const converted = known ? this.convertQuote(quoteCost, date) : { amount: 0, rate: null };
+            lots.get(coin).push({
+                quantity,
+                cost: converted.amount,
+                quoteCost,
+                fxRate: converted.rate,
+                date,
+                known,
+            });
         };
 
-        const dispose = (coin, quantity, proceeds, date, sourceCount, recordPair = true) => {
+        const dispose = (coin, quantity, quoteProceeds, date, sourceCount, recordPair = true) => {
             let quantityLeft = quantity;
             let knownQuantity = 0;
             let knownCost = 0;
+            let knownQuoteCost = 0;
             let openingDate = null;
+            const matchedFxRates = new Map();
             const queue = lots.get(coin) || [];
 
             while (quantityLeft > EPSILON && queue.length > 0) {
@@ -161,11 +190,16 @@ class Binance extends Broker {
                 if (lot.known) {
                     knownQuantity += matched;
                     knownCost += lot.cost * matched / lot.quantity;
+                    knownQuoteCost += lot.quoteCost * matched / lot.quantity;
+                    if (lot.fxRate) {
+                        matchedFxRates.set(lot.fxRate.dateString, lot.fxRate.usdPerAud);
+                    }
                     if (!openingDate || lot.date < openingDate) {
                         openingDate = lot.date;
                     }
                 }
                 lot.cost -= lot.cost * matched / lot.quantity;
+                lot.quoteCost -= lot.quoteCost * matched / lot.quantity;
                 lot.quantity -= matched;
                 quantityLeft -= matched;
                 if (lot.quantity <= EPSILON) {
@@ -182,7 +216,15 @@ class Binance extends Broker {
                 return;
             }
 
-            const knownProceeds = proceeds * knownQuantity / quantity;
+            const knownQuoteProceeds = quoteProceeds * knownQuantity / quantity;
+            const convertedProceeds = this.convertQuote(knownQuoteProceeds, date);
+            const knownProceeds = convertedProceeds.amount;
+            for (const [rateDate, rate] of matchedFxRates) {
+                this.stats.used_fx_rates.set(rateDate, rate);
+            }
+            if (convertedProceeds.rate) {
+                this.stats.used_fx_rates.set(convertedProceeds.rate.dateString, convertedProceeds.rate.usdPerAud);
+            }
             const transaction = new models.Transaction();
             transaction.id = ++transactionId;
             transaction.uuid = `binance-${date.getTime()}-${transactionId}`;
@@ -190,7 +232,7 @@ class Binance extends Broker {
             transaction.date_close = date;
             transaction.date = date;
             transaction.type = 'sell';
-            transaction.currency = this.quote_currency;
+            transaction.currency = this.reporting_currency;
             transaction.exchange = 'BINANCE';
             transaction.symbol = `${coin}/${this.quote_currency}`;
             transaction.quantity = knownQuantity;
@@ -203,6 +245,9 @@ class Binance extends Broker {
             transaction.swaps = 0;
             transaction.cost = knownCost;
             transaction.proceeds = knownProceeds;
+            transaction.quote_cost = knownQuoteCost;
+            transaction.quote_proceeds = knownQuoteProceeds;
+            transaction.quote_profit = knownQuoteProceeds - knownQuoteCost;
             transaction.source_count = sourceCount;
             transaction.is_binance_closed_pair = true;
 
@@ -400,10 +445,19 @@ class Binance extends Broker {
         if (pairs.length > 0) {
             financialYear.complete_pairs = pairs.length;
             financialYear.quote_currency = this.quote_currency;
+            financialYear.reporting_currency = this.reporting_currency;
+            financialYear.quote_total_cost = pairs.reduce((sum, profit) => sum + profit.transaction_close.quote_cost, 0);
+            financialYear.quote_total_proceeds = pairs.reduce((sum, profit) => sum + profit.transaction_close.quote_proceeds, 0);
+            financialYear.quote_profit = pairs.reduce((sum, profit) => sum + profit.transaction_close.quote_profit, 0);
             financialYear.source_records = this.stats.source_records;
             financialYear.ignored_funding_records = this.stats.ignored_funding_records;
             financialYear.ignored_cross_crypto_conversions = this.stats.ignored_cross_crypto_conversions;
             financialYear.unmatched_disposal_quantity = Object.fromEntries(this.stats.unmatched_disposal_quantity);
+            if (this.fx_rates) {
+                financialYear.fx_source = 'RBA F11.1 FXRUSD (A$1=USD)';
+                financialYear.fx_method = 'USDT treated as USD; transaction-date RBA rate, previous published day when unavailable';
+                financialYear.fx_rates_used = Object.fromEntries(this.stats.used_fx_rates);
+            }
         }
         return financialYear;
     }

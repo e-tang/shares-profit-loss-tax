@@ -56,6 +56,7 @@ function processTrades(input, options = {}) {
         'col-currency': null,
         'adjust-transaction': true,
         'price-unit': 0.01,
+        'fx-rates': null,
     };
 
     // Merge default options with provided options

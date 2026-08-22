@@ -30,6 +30,7 @@ const params = new Params({
     "col-currency": null,
     "adjust-transaction": true,
     "price-unit": 0.01,
+    "fx-rates": null,
     "sort-by": "pl", // symbol, etc
 });
 
@@ -38,7 +39,7 @@ const input = opts['---'];
 
 // broker is no longer essential to be provided in the argumetn
 if (!input || input.length === 0) {
-    console.log("Usage: sprolosta --broker <broker> [--save] [--portfolio-file <file>] [--year <year>] [--details] [--symbol <symbol>] [--ignore <symbol>] [--col-symbol <index>] [--col-date <index>] [--col-quantity <index>] [--col-price <index>] [--col-type <index>] <input>");
+    console.log("Usage: sprolosta --broker <broker> [--save] [--portfolio-file <file>] [--year <year>] [--fx-rates <rba-f11.1.csv>] [--details] [--symbol <symbol>] [--ignore <symbol>] [--col-symbol <index>] [--col-date <index>] [--col-quantity <index>] [--col-price <index>] [--col-type <index>] <input>");
     process.exit(1);
 }
 
@@ -68,7 +69,12 @@ try {
         }
         if (financial_year_pl.complete_pairs) {
             console.log("Complete Binance pairs: " + financial_year_pl.complete_pairs);
-            console.log("Reporting currency: " + financial_year_pl.quote_currency);
+            console.log("Reporting currency: " + financial_year_pl.reporting_currency);
+            console.log("Complete-pair P/L in " + financial_year_pl.quote_currency + ": " + financial_year_pl.quote_profit.toFixed(2));
+            if (financial_year_pl.fx_source) {
+                console.log("FX source: " + financial_year_pl.fx_source);
+                console.log("FX method: " + financial_year_pl.fx_method);
+            }
             console.log("Ignored funding/transfer records: " + financial_year_pl.ignored_funding_records);
             console.log("Ignored cross-crypto conversions: " + financial_year_pl.ignored_cross_crypto_conversions);
             const unmatched = financial_year_pl.unmatched_disposal_quantity || {};

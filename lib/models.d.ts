@@ -33,6 +33,9 @@ declare class Transaction {
     cost: number;
     proceeds: number;
     source_count: number;
+    quote_cost: number;
+    quote_proceeds: number;
+    quote_profit: number;
     
     /**
      * Creates a copy of the transaction
@@ -122,6 +125,13 @@ declare class FinancialYear {
     total_swaps?: number;
     complete_pairs?: number;
     quote_currency?: string;
+    reporting_currency?: string;
+    quote_total_cost?: number;
+    quote_total_proceeds?: number;
+    quote_profit?: number;
+    fx_source?: string;
+    fx_method?: string;
+    fx_rates_used?: Record<string, number>;
     source_records?: number;
     ignored_funding_records?: number;
     ignored_cross_crypto_conversions?: number;
