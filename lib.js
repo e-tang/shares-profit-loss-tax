@@ -6,6 +6,7 @@
 const brokers = require('./brokers');
 const models = require('./lib/models');
 const utils = require('./lib/utils');
+const { calculateIncome } = require('./lib/income');
 const fs = require('fs');
 const app_data = require('./data');
 
@@ -84,8 +85,8 @@ function processTrades(input, options = {}) {
     // Handle string input (CSV content) or file paths
     if (isCsvContent) {
         // Input is CSV content string
-        const result = broker.load_content(all_trades, input, { index: 0, offset: 0, ...opts });
-        all_trades = result && result.trades ? result.trades : result;
+        let { trades } = brokers.normalizeData(input, broker_name, {index: 0, offset: 0, trades: all_trades, ...opts});
+        all_trades = trades;
     } else {
         /**
          * Load the broker's data from the CSV file.
@@ -107,8 +108,7 @@ function processTrades(input, options = {}) {
             for (let i = 0; i < files.length; i++) {
                 try {
                     if (!fs.existsSync(files[i])) {
-                        console.error("File not found: " + files[i]);
-                        process.exit(1);
+                        throw new Error("File not found: " + files[i]);
                     }
                     console.log("Loading transactions file: " + files[i])
                     let content = fs.readFileSync(files[i], 'utf8');
@@ -259,6 +259,7 @@ function processTradesWithRecords(trades, broker, options = {}) {
 module.exports = {
     processTrades,
     processTradesWithRecords,
+    calculateIncome,
     models,
     utils,
     brokers

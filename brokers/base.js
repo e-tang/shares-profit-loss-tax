@@ -179,10 +179,7 @@ class Broker {
 
         while(last_transaction) {
             if (last_transaction.type == transaction.type) {
-                console.error("The last transaction is the same type as the current transaction");
-                console.error("Last transaction: " + JSON.stringify(last_transaction));
-                console.error("Current transaction: " + JSON.stringify(transaction));
-                process.exit(1);
+                throw new Error("The last transaction is the same type as the current transaction. Last transaction: " + JSON.stringify(last_transaction) + ". Current transaction: " + JSON.stringify(transaction));
             }
             
             acquired_quantity += (last_transaction.quantity);
@@ -257,34 +254,14 @@ class Broker {
             // now check if the asset hold more than 12 months
             // if so, then there is discount for the capital gain
             // worry about the discount only if there is profit
+            // ATO CGT discount: held STRICTLY more than 12 months — disposal must fall
+            // strictly after the first anniversary of the parcel's acquisition.
+            // setFullYear on Feb-29 rolls to Mar-1 in non-leap years: conservative
+            // (denies the discount on the ambiguous leap-day anniversary), documented.
             if (profit_num > 0) {
-                let year = last_transaction.date.getFullYear();
-                let close_year = transaction.date.getFullYear();
-                if (year != close_year) {
-                    if (close_year - year > 1) {
-                        profit.discount_eligible = true;
-                    }
-                    else {
-                        let month = last_transaction.date.getMonth();
-                        let close_month = transaction.date.getMonth();
-                        if (month <= close_month) {
-
-                            if ((close_month - month) > 1) {
-                                profit.discount_eligible = true;
-                            }
-                            else {
-                                let day = last_transaction.date.getDate();
-                                let close_day = transaction.date.getDate();
-
-                                if (day <= close_day) {
-                                    // the asset is hold more than 12 months
-                                    profit.discount_eligible = true;
-                                    // profit.discount_quantity += last_transaction.quantity;
-                                }
-                            }
-                        }
-                    }
-                }
+                const anniversary = new Date(last_transaction.date.getTime());
+                anniversary.setFullYear(anniversary.getFullYear() + 1);
+                profit.discount_eligible = transaction.date > anniversary;
             }
 
             if (acquired_quantity_abs >= quantity_target) {
@@ -328,8 +305,7 @@ class Broker {
         else if (acquired_quantity_abs > quantity_target) {
             // position partially closed
             if (!last_transaction) {
-                console.error("No last transaction");
-                process.exit(1);
+                throw new Error("No last transaction");
             }
             // keep the average price
             // holding.average_price = last_transaction.price;
@@ -393,8 +369,7 @@ class Broker {
                     trade_value.sell += transaction.total;
                 }
                 else {
-                    console.error("Unknown transaction type: " + transaction.type);
-                    process.exit(1);
+                    throw new Error("Unknown transaction type: " + transaction.type);
                 }
             }
             else {
@@ -405,8 +380,7 @@ class Broker {
                     trade_value.sell += transaction.price * transaction.quantity;
                 }
                 else {
-                    console.error("Unknown transaction type: " + transaction.type);
-                    process.exit(1);
+                    throw new Error("Unknown transaction type: " + transaction.type);
                 }
             }
 
@@ -450,8 +424,7 @@ class Broker {
                         // console.debug("Average price now: " + holding.average_price)
                     }
                     if (holding.average_price < 0) {
-                        console.error("Average price is negative: " + holding.average_price);
-                        process.exit(1);
+                        throw new Error("Average price is negative: " + holding.average_price);
                     }
 
                     holding.records.push(transaction);
@@ -521,6 +494,21 @@ class Broker {
         throw new Error("Func (line_to_transaction) is Not implemented");
     }
 
+    /**
+     * Parse CSV content into trades using broker-specific line handling.
+     * @param {Trades} [trades] - existing trades container to append to (a new one is created if omitted)
+     * @param {string} content - raw CSV content
+     * @param {Object} options
+     * @param {number} [options.index=0] - starting transaction id offset
+     * @param {number} [options.offset=0] - lines to skip at the start of content;
+     *   also added to reported diagnostic line numbers so they stay file-global
+     * @param {Array<{line: number, raw: string, reason: string}>} [options.diagnostics]
+     *   When present, unparseable lines are collected here instead of throwing.
+     *   Reasons: 'parse-error: <msg>' (line_to_transaction threw),
+     *   'not-a-transaction' (falsy return), 'no-data-header-recognized' (nothing parsed).
+     *   When ABSENT, parse exceptions propagate (legacy fail-loud behavior).
+     * @returns {{count: number, trades: Trades}} count includes attempted (even skipped) data lines
+     */
     load_content_common(trades, content, options) {
         trades = trades || new models.Trades();
         let { index, offset } = options;
@@ -557,10 +545,36 @@ class Broker {
                 }
             });
 
-            let transaction = this.line_to_transaction(fields, (++count) + index);
+            let transaction;
+            try {
+                transaction = this.line_to_transaction(fields, (++count) + index);
+            } catch (e) {
+                // Only swallow line parse errors when the caller provided a
+                // diagnostics collector (e.g. the import-preview flow, which
+                // can show skipped lines to the user). Without a collector,
+                // rethrow -- legacy callers (e.g. the anonymous calculate
+                // flow) must keep failing loudly rather than silently losing
+                // rows from the tax calculation.
+                if (!Array.isArray(options.diagnostics)) {
+                    throw e;
+                }
+                options.diagnostics.push({
+                    line: j + 1 + (options.offset || 0),
+                    raw: line,
+                    reason: 'parse-error: ' + e.message,
+                });
+                continue;
+            }
             if (!transaction) {
-                // not all CVS lines are transactions
+                // not all CSV lines are transactions
                 // e.g. the transaction records downloaded from the CommSec website
+                if (Array.isArray(options.diagnostics)) {
+                    options.diagnostics.push({
+                        line: j + 1 + (options.offset || 0),
+                        raw: line,
+                        reason: 'not-a-transaction',
+                    });
+                }
                 continue;
             }
 
@@ -586,6 +600,11 @@ class Broker {
 
             transactions.push(transaction);
         }
+
+        if (Array.isArray(options.diagnostics) && count === 0 && !start) {
+            options.diagnostics.push({ line: 0, raw: '', reason: 'no-data-header-recognized' });
+        }
+
         return {
             count: count,
             trades

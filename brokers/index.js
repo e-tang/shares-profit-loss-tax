@@ -6,6 +6,7 @@
 
 const CommSec = require('./commsec');
 const FPMarkets = require('./fpmarkets');
+const SelfWealth = require('./selfwealth');
 const Any = require('./any');
 
 const models = require('../lib/models');
@@ -46,7 +47,12 @@ const identifyBroker = (csvContent) => {
         .replace(/^\uFEFF/, '')
         .replace(/"/g, '');
 
-    if (header.startsWith("Code,Company,Date,Type,Quantity")) {
+    if (header.startsWith("Trade Date,Settlement Date,Action,Code,Company,Units,Average Price,Brokerage,Total Value")) {
+        // exact-header sniff (see brokers/selfwealth.js) -- checked before the
+        // more permissive checks below so a SelfWealth export is never
+        // misclassified as another broker's file.
+        return "selfwealth";
+    } else if (header.startsWith("Code,Company,Date,Type,Quantity")) {
         return "commsec";
     } else if (header.startsWith("Date,Reference,Details")) {
         return "commsec"; // alternative commsec format
@@ -62,6 +68,7 @@ class Brokers {
     constructor() {
         this.commsec = new CommSec();
         this.fpmarkets = new FPMarkets();
+        this.selfwealth = new SelfWealth();
         this.normalizeCommSecData = normalizeCommSecData;
         this.normalizeFPMarketsData = normalizeFPMarketsData;
         this.normalizeGenericData = normalizeGenericData;

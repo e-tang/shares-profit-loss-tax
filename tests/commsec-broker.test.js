@@ -12,27 +12,30 @@ describe('CommSec broker', () => {
         broker = new CommSec();
     });
     
+    // Note: the broker's runtime flag is `from_search_results`, not `before_2023`
+    // (see brokers/commsec.js). `from_search_results === true` corresponds to the
+    // pre-2023 "Code,Company,..." export format.
     test('should initialize with correct values', () => {
         expect(broker.name).toBe('CommSec');
         expect(broker.from_search_results).toBe(false);
     });
-    
-    test('quote_count_check should return true outside search-results format', () => {
+
+    test('quote_count_check should return true when from_search_results is false', () => {
         broker.from_search_results = false;
         expect(broker.quote_count_check('any,line')).toBe(true);
     });
-    
+
     test('load_content should detect before_2023 format correctly', () => {
         const trades = new models.Trades();
-        
+
         // Mock implementation to avoid actual processing
         jest.spyOn(broker, 'load_content_common').mockReturnValue(0);
-        
+
         // Test before 2023 format detection
         const before2023Content = 'Code,Company,Date,Type,Quantity,Unit Price ($),Trade Value ($)';
         broker.load_content(trades, before2023Content, { index: 0, offset: 0 });
         expect(broker.from_search_results).toBe(true);
-        
+
         // Test after 2023 format detection
         const after2023Content = 'Date,Reference,Details,Debit($),Credit($),Balance($)';
         broker.load_content(trades, after2023Content, { index: 0, offset: 0 });
@@ -61,11 +64,11 @@ describe('CommSec broker', () => {
         broker.line_to_transaction([], 1);
         expect(broker.line_to_transaction_before_2023).toHaveBeenCalledWith([], 1);
         expect(broker.line_to_transaction_after_2023).not.toHaveBeenCalled();
-        
+
         // Test after 2023 delegation
         broker.line_to_transaction_before_2023.mockClear();
         broker.line_to_transaction_after_2023.mockClear();
-        
+
         broker.from_search_results = false;
         broker.line_to_transaction([], 1);
         expect(broker.line_to_transaction_before_2023).not.toHaveBeenCalled();
@@ -108,10 +111,12 @@ describe('CommSec broker', () => {
         ];
         
         const transaction = broker.line_to_transaction_after_2023(fields, 2);
-        
+
         expect(transaction).toBeInstanceOf(models.Transaction);
         expect(transaction.id).toBe(2);
         expect(transaction.type).toBe('sell');
+        // adjust_transaction_common() (brokers/base.js) negates quantity/value/total
+        // for sell transactions so profit calculations can treat them uniformly.
         expect(transaction.quantity).toBe(-50);
         expect(transaction.symbol).toBe('CBA');
         expect(transaction.price).toBe(110.25);
