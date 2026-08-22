@@ -14,11 +14,11 @@ describe('CommSec broker', () => {
     
     test('should initialize with correct values', () => {
         expect(broker.name).toBe('CommSec');
-        expect(broker.before_2023).toBe(false);
+        expect(broker.from_search_results).toBe(false);
     });
     
-    test('quote_count_check should return true when before_2023 is false', () => {
-        broker.before_2023 = false;
+    test('quote_count_check should return true outside search-results format', () => {
+        broker.from_search_results = false;
         expect(broker.quote_count_check('any,line')).toBe(true);
     });
     
@@ -31,12 +31,12 @@ describe('CommSec broker', () => {
         // Test before 2023 format detection
         const before2023Content = 'Code,Company,Date,Type,Quantity,Unit Price ($),Trade Value ($)';
         broker.load_content(trades, before2023Content, { index: 0, offset: 0 });
-        expect(broker.before_2023).toBe(true);
+        expect(broker.from_search_results).toBe(true);
         
         // Test after 2023 format detection
         const after2023Content = 'Date,Reference,Details,Debit($),Credit($),Balance($)';
         broker.load_content(trades, after2023Content, { index: 0, offset: 0 });
-        expect(broker.before_2023).toBe(false);
+        expect(broker.from_search_results).toBe(false);
         
         // Test no data available
         const noDataContent = 'No data available for the specified period';
@@ -57,7 +57,7 @@ describe('CommSec broker', () => {
         jest.spyOn(broker, 'line_to_transaction_after_2023').mockReturnValue({});
         
         // Test before 2023 delegation
-        broker.before_2023 = true;
+        broker.from_search_results = true;
         broker.line_to_transaction([], 1);
         expect(broker.line_to_transaction_before_2023).toHaveBeenCalledWith([], 1);
         expect(broker.line_to_transaction_after_2023).not.toHaveBeenCalled();
@@ -66,7 +66,7 @@ describe('CommSec broker', () => {
         broker.line_to_transaction_before_2023.mockClear();
         broker.line_to_transaction_after_2023.mockClear();
         
-        broker.before_2023 = false;
+        broker.from_search_results = false;
         broker.line_to_transaction([], 1);
         expect(broker.line_to_transaction_before_2023).not.toHaveBeenCalled();
         expect(broker.line_to_transaction_after_2023).toHaveBeenCalledWith([], 1);
@@ -112,11 +112,11 @@ describe('CommSec broker', () => {
         expect(transaction).toBeInstanceOf(models.Transaction);
         expect(transaction.id).toBe(2);
         expect(transaction.type).toBe('sell');
-        expect(transaction.quantity).toBe(50);
+        expect(transaction.quantity).toBe(-50);
         expect(transaction.symbol).toBe('CBA');
         expect(transaction.price).toBe(110.25);
-        expect(transaction.value).toBe(5512.5);
-        expect(transaction.total).toBe(5512.5);
+        expect(transaction.value).toBe(-5512.5);
+        expect(transaction.total).toBe(-5512.5);
     });
     
     test('line_to_transaction_after_2023 should return null for non-buy/sell transactions', () => {

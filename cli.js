@@ -60,6 +60,12 @@ try {
         console.log("Computing profit / loss for financial year: " + yearStr);
         
         console.log("Total profit / loss: " + financial_year_pl.profit.toFixed(2));
+        if (financial_year_pl.closed_positions) {
+            console.log("Closed positions: " + financial_year_pl.closed_positions);
+            console.log("Gross trading profit / loss: " + financial_year_pl.gross_profit.toFixed(2));
+            console.log("Commission: " + financial_year_pl.total_commission.toFixed(2));
+            console.log("Swaps: " + financial_year_pl.total_swaps.toFixed(2));
+        }
         console.log("Total cost: " + financial_year_pl.total_cost.toFixed(2));
         console.log("Total profit eligible for discount: " + financial_year_pl.profit_discount);
         console.log("Total buy (inc. brokerage): " + financial_year_pl.total_buy.toFixed(2));

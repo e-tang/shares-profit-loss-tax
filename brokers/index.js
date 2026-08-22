@@ -41,11 +41,18 @@ const normalizeGenericData = (csvData) => {
 };
 
 const identifyBroker = (csvContent) => {
-    if (csvContent.includes("Code,Company,Date,Type,Quantity")) {
+    const header = csvContent
+        .split(/\r?\n/, 1)[0]
+        .replace(/^\uFEFF/, '')
+        .replace(/"/g, '');
+
+    if (header.startsWith("Code,Company,Date,Type,Quantity")) {
         return "commsec";
-    } else if (csvContent.includes("Date,Reference,Details")) {
+    } else if (header.startsWith("Date,Reference,Details")) {
         return "commsec"; // alternative commsec format
-    } else if (csvContent.includes("ID,Date,Time,Account Code,Buy or Sell,Currency,Exchange,Stock,Volume,Price,Value")) {
+    } else if (header.startsWith("ID,Date,Time,Account Code,Buy or Sell,Currency,Exchange,Stock,Volume,Price,Value")) {
+        return "fpmarkets";
+    } else if (header.startsWith("ID,Open Time,Close Time,Account Code,Buy or Sell,Currency,Stock,Volume,Open Price,Close Price,Commission,Swaps,Profit")) {
         return "fpmarkets";
     }
     return null;

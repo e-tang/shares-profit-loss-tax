@@ -20,6 +20,15 @@ declare class Transaction {
     exchange: string;
     note: string;
     count: number;
+    is_closed_position: boolean;
+    date_open: Date | null;
+    date_close: Date | null;
+    open_price: number;
+    close_price: number;
+    commission: number;
+    swaps: number;
+    gross_profit: number;
+    net_profit: number;
     
     /**
      * Creates a copy of the transaction
@@ -45,6 +54,9 @@ declare class Portfolio {
     value: number;
     cost: number;
     profit: number;
+    gross_profit: number;
+    commission: number;
+    swaps: number;
     profits: Map<number, number>;
     history_years: Set<number>;
 }
@@ -100,6 +112,10 @@ declare class FinancialYear {
     profit: number;
     profit_discount: number;
     total_trades: number;
+    closed_positions?: number;
+    gross_profit?: number;
+    total_commission?: number;
+    total_swaps?: number;
 }
 
 /**

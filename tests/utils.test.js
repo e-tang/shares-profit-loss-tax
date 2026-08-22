@@ -12,8 +12,6 @@ describe('get_financial_year function', () => {
         expect(utils.get_financial_year(new Date('2023-03-15'))).toBe(2022);
         expect(utils.get_financial_year(new Date('2023-04-15'))).toBe(2022);
         expect(utils.get_financial_year(new Date('2023-05-15'))).toBe(2022);
-        // In the implementation, June 30 is actually compared to June 30 PREVIOUS year
-        // so it returns the current year (2023)
         expect(utils.get_financial_year(new Date('2023-06-15'))).toBe(2022);
     });
 
@@ -29,9 +27,7 @@ describe('get_financial_year function', () => {
 
     test('should handle edge cases', () => {
         // Test the exact financial year boundaries 
-        // Based on implementation, June 30th is actually part of the current year
-        // in the financial year calculation
-        expect(utils.get_financial_year(new Date('2023-06-30'))).toBe(2023);
+        expect(utils.get_financial_year(new Date(2023, 5, 30, 23, 59, 59))).toBe(2022);
         expect(utils.get_financial_year(new Date('2023-07-01'))).toBe(2023);
     });
 });

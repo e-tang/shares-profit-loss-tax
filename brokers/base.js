@@ -77,7 +77,7 @@ class Broker {
                             trade_profit_max.profit = profit.profit;
                             trade_profit_max.type = profit.trade_type;
                         }
-                    } else {
+                    } else if (profit.profit < 0) {
                         sub_profit_loss += profit.profit;
                         sub_loss_trades++;
 

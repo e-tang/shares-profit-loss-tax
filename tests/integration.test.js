@@ -8,7 +8,7 @@ const models = require('../lib/models');
 // Create mock broker class to simulate CommSec
 const mockCommSecBroker = {
     name: 'commsec',
-    load: jest.fn(() => {
+    load_content: jest.fn(() => {
         const trades = new models.Trades();
         
         // Simulate CBA transactions
@@ -68,7 +68,7 @@ const mockCommSecBroker = {
         trades.first = cba1.date;
         trades.last = nab2.date;
         
-        return trades;
+        return { count: 4, trades };
     }),
     update_holding: jest.fn(),
     calculate_financial_year_profit: jest.fn(() => {
@@ -157,25 +157,25 @@ describe('Integration tests', () => {
     });
     
     test('should filter symbols correctly', () => {
+        mockCommSecBroker.update_holding.mockClear();
         const results = sprolosta.processTrades(['mock-commsec.csv'], {
             broker: 'commsec',
             symbol: 'CBA'
         });
         
-        // Should only process CBA transactions
-        const holdingsSymbols = results.holdings.map(h => h.symbol);
-        expect(holdingsSymbols).not.toContain('NAB');
+        const processedSymbols = mockCommSecBroker.update_holding.mock.calls.map(call => call[1]);
+        expect(processedSymbols).toEqual(['CBA']);
     });
     
     test('should ignore symbols correctly', () => {
+        mockCommSecBroker.update_holding.mockClear();
         const results = sprolosta.processTrades(['mock-commsec.csv'], {
             broker: 'commsec',
             ignore: ['CBA']
         });
         
-        // Should ignore CBA transactions
-        const nabHoldings = results.holdings.filter(h => h.symbol === 'NAB');
-        expect(nabHoldings.length).toBe(1);
+        const processedSymbols = mockCommSecBroker.update_holding.mock.calls.map(call => call[1]);
+        expect(processedSymbols).toEqual(['NAB']);
     });
     
     test('should calculate profits for specific financial year', () => {

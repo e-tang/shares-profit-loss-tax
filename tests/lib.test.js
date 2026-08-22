@@ -15,7 +15,7 @@ jest.mock('fs', () => ({
 // Mock broker implementation
 const mockBroker = {
     name: 'mock',
-    load: jest.fn(() => {
+    load_content: jest.fn(() => {
         const trades = new models.Trades();
         
         // Create buy transaction
@@ -50,9 +50,8 @@ const mockBroker = {
         trades.first = buyTransaction.date;
         trades.last = sellTransaction.date;
         
-        return trades;
+        return { count: 2, trades };
     }),
-    load_content: jest.fn(() => 2),
     update_holding: jest.fn(),
     calculate_financial_year_profit: jest.fn(() => {
         const financialYear = new models.FinancialYear();

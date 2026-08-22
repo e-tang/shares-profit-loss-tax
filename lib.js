@@ -62,10 +62,12 @@ function processTrades(input, options = {}) {
 
     // Load trades
     let all_trades = new models.Trades();
+    const isCsvContent = typeof input === 'string' && input.includes('\n');
 
     let broker_name = "any";
     if (!opts.broker) {
-        let csvContent = fs.readFileSync(input[0], "utf-8");
+        const firstFile = Array.isArray(input) ? input[0] : input;
+        const csvContent = isCsvContent ? input : fs.readFileSync(firstFile, "utf-8");
         broker_name = brokers.identifyBroker(csvContent);
     }
     else
@@ -80,11 +82,10 @@ function processTrades(input, options = {}) {
     opts.broker = broker;
     
     // Handle string input (CSV content) or file paths
-    if (typeof input === 'string' && (!Array.isArray(input) || input.includes('\n'))) {
+    if (isCsvContent) {
         // Input is CSV content string
-        trades = new models.Trades();
-        // broker.load_content(trades, input, { index: 0, offset: 0 });
-        trades = normalizeData(input, broker_name, {index: 0, offset: 0, ...opts});
+        const result = broker.load_content(all_trades, input, { index: 0, offset: 0, ...opts });
+        all_trades = result && result.trades ? result.trades : result;
     } else {
         /**
          * Load the broker's data from the CSV file.
@@ -111,8 +112,16 @@ function processTrades(input, options = {}) {
                     }
                     console.log("Loading transactions file: " + files[i])
                     let content = fs.readFileSync(files[i], 'utf8');
-                    // let { count, trades } = this.load_content(trades, content, { index: total_count, offset: offset });
-                    let { count, trades } = brokers.normalizeData(content, broker_name, {index: total_count, offset: offset, trades: all_trades, ...opts});
+                    const result = broker.load_content(all_trades, content, {
+                        index: total_count,
+                        offset: offset,
+                        ...opts
+                    });
+                    const count = result && Number.isFinite(result.count) ? result.count : 0;
+                    const trades = result && result.trades ? result.trades : result;
+                    if (!trades || !trades.symbols) {
+                        throw new Error(`Broker did not return parsed trades for ${files[i]}`);
+                    }
                     total_count += count;
                     all_trades = trades;
                 }
@@ -183,9 +192,15 @@ function processTradesWithRecords(trades, broker, options = {}) {
         });
 
         // Determine years to process
-        const years_array = options.year > -1 ? [options.year] : Array.from(trades.periods);
-        years_array.sort();
-        years_array.unshift(years_array[0] - 1);
+        let years_array;
+        if (options.year > -1) {
+            years_array = [Number(options.year)];
+        }
+        else {
+            years_array = Array.from(trades.periods);
+            years_array.sort();
+            years_array.unshift(years_array[0] - 1);
+        }
         
         // Calculate financial year profits
         results.portfolio = portfolio;
