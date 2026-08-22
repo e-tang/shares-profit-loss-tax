@@ -1,6 +1,6 @@
 # SPROLOSTA
 
-Shares PROfit / LOSs TAx (`sprolosta`) is a Node.js command-line tool and library for calculating realised share-trading profit and loss by Australian financial year (1 July to 30 June). It supports CommSec, FP Markets, and column-mapped generic CSV exports.
+Shares PROfit / LOSs TAx (`sprolosta`) is a Node.js command-line tool and library for calculating realised trading profit and loss by Australian financial year (1 July to 30 June). It supports CommSec, FP Markets, Binance closed-pair calculations, and column-mapped generic CSV exports.
 
 The calculator groups transactions by symbol, sorts them chronologically, maintains an average cost for each open position, assigns realised results to the financial year in which a position is closed, and separately reports profitable amounts it considers eligible for the 12-month CGT discount.
 
@@ -42,6 +42,29 @@ Net P/L = Profit + Commission + Swaps
 ```
 
 The result belongs to the financial year containing `Close Time`. Decimal CFD volumes are supported. Closed CFD positions are not placed in the share CGT-discount bucket, even when the opening date is more than 12 months earlier.
+
+### Binance
+
+Binance transaction-history exports beginning with this header are supported:
+
+```text
+User ID,Time,Account,Operation,Coin,Change,Remark
+```
+
+The Binance adapter reconstructs complete round trips quoted in USDT from
+`Transaction Buy`, `Transaction Spend`, `Transaction Sold`, `Transaction
+Revenue`, `Transaction Fee`, and paired `Binance Convert` ledger rows. Fees in
+the traded asset or USDT are folded into the paired result.
+
+Deposits, withdrawals, and transfers between Binance wallets are ignored.
+Cross-crypto conversions without a USDT leg are not valued: received inventory
+is marked unknown, and its share of a later disposal is excluded. This prevents
+missing funding or an unpriced crypto deposit from being treated as zero-cost
+profit.
+
+Binance results are reported in **USDT**, not AUD. They represent trading P/L
+for complete USDT-quoted pairs, not a complete Australian crypto CGT schedule,
+and are never placed in the share CGT-discount bucket.
 
 ### Other brokers and generic CSV files
 
@@ -112,6 +135,17 @@ sprolosta --broker fpmarkets --save false --year 2025 FPMarkets_2025-2026.csv
 
 The files do not need to be passed chronologically; transactions are sorted by date within each symbol. Do not supply overlapping exports unless duplicate transactions have been removed, because the tool does not deduplicate them.
 
+### Binance transaction history
+
+```bash
+sprolosta --broker binance --save false --year 2025 Binance-Transaction-History.csv
+```
+
+`--year 2025` selects the 2025–2026 Australian financial year. When Binance
+produces several `partN-ofN` files, pass every non-overlapping part to the same
+command. Parts may be passed in any order because ledger rows are sorted before
+pair reconstruction.
+
 ### Selected symbols
 
 ```bash
@@ -174,7 +208,7 @@ Commission, fee, and tax columns are parsed but are not currently added to `tota
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--broker` | auto-detect/any | `commsec`, `fpmarkets`, or `any` |
+| `--broker` | auto-detect/any | `commsec`, `fpmarkets`, `binance`, or `any` |
 | `--save` | `true` in the CLI | Write the calculated portfolio JSON |
 | `--portfolio-file` | `portfolio.json` | Portfolio output path used by `--save` |
 | `--year` | all | Starting year of the Australian financial year |
@@ -201,6 +235,12 @@ The report contains:
 
 For FP Markets cTrader input, the report also shows closed-position count, gross trading P/L, commission, and swaps. Buy/sell turnover and portfolio cost remain zero because the export does not provide account-currency transaction values and contains only closed positions.
 
+For Binance input, the report shows complete-pair count, reporting currency,
+ignored funding/transfer records, and ignored cross-crypto conversions. `Total
+buy` is paired USDT cost and `Total sell` is paired USDT proceeds displayed as
+a negative number. Unmatched quantities are exposed in the library result for
+reconciliation.
+
 Because eligible gains are reported separately, the program's total pre-discount realised result is generally:
 
 ```text
@@ -221,6 +261,14 @@ Do not simply halve the eligible figure to prepare a tax return. Capital losses,
 - A malformed file may be logged and skipped while other files continue processing, so always reconcile the reported symbol count, first/last dates, trade count, and turnover with the source exports.
 - The library accepts either a CSV-content string or an array of file paths. Use file arrays when combining multiple exports.
 - FP Markets cTrader results use the broker-reported closed-position P/L, commission, and swaps. They do not attempt to reconstruct CFD contract values from price and volume.
+- Binance closed-pair results use FIFO inventory matching solely to distinguish
+  known USDT-costed quantities from unknown inventory. Deposits, withdrawals,
+  wallet transfers, and unvalued cross-crypto quantities do not contribute to
+  P/L.
+- Binance fee currencies other than the traded asset or USDT are rejected
+  because this export does not provide a USDT value for those fees.
+- Binance results remain denominated in USDT. Converting them to an AUD tax
+  result requires an independently supportable AUD valuation method.
 
 ## Library usage
 

@@ -29,6 +29,10 @@ declare class Transaction {
     swaps: number;
     gross_profit: number;
     net_profit: number;
+    is_binance_closed_pair: boolean;
+    cost: number;
+    proceeds: number;
+    source_count: number;
     
     /**
      * Creates a copy of the transaction
@@ -116,6 +120,12 @@ declare class FinancialYear {
     gross_profit?: number;
     total_commission?: number;
     total_swaps?: number;
+    complete_pairs?: number;
+    quote_currency?: string;
+    source_records?: number;
+    ignored_funding_records?: number;
+    ignored_cross_crypto_conversions?: number;
+    unmatched_disposal_quantity?: Record<string, number>;
 }
 
 /**

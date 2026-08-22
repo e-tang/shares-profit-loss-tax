@@ -1,0 +1,18 @@
+﻿User ID,Time,Account,Operation,Coin,Change,Remark
+123,2025-07-01 10:00:00,Spot,Deposit,USDT,500,
+123,2025-07-02 10:00:00,Spot,Transaction Spend,USDT,-100,
+123,2025-07-02 10:00:00,Spot,Transaction Buy,BTC,1,
+123,2025-07-02 10:00:00,Spot,Transaction Fee,BTC,-0.01,
+123,2025-07-03 10:00:00,Spot,Transaction Sold,BTC,-0.99,
+123,2025-07-03 10:00:00,Spot,Transaction Revenue,USDT,120,
+123,2025-07-03 10:00:00,Spot,Transaction Fee,USDT,-1,
+123,2025-08-01 10:00:00,Spot,Binance Convert,USDT,-50,
+123,2025-08-01 10:00:01,Spot,Binance Convert,LTC,5,
+123,2025-08-02 10:00:00,Spot,Binance Convert,LTC,-5,
+123,2025-08-02 10:00:01,Spot,Binance Convert,USDT,60,
+123,2025-09-01 10:00:00,Spot,Binance Convert,TRX,-10,
+123,2025-09-01 10:00:00,Spot,Binance Convert,ETH,0.1,
+123,2025-09-02 10:00:00,Spot,Transaction Sold,ETH,-0.1,
+123,2025-09-02 10:00:00,Spot,Transaction Revenue,USDT,20,
+123,2025-09-02 10:00:00,Spot,Transaction Fee,USDT,-0.1,
+123,2025-09-03 10:00:00,Spot,Withdraw,USDT,-50,Withdraw fee is included

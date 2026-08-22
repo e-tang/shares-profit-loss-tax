@@ -66,6 +66,16 @@ try {
             console.log("Commission: " + financial_year_pl.total_commission.toFixed(2));
             console.log("Swaps: " + financial_year_pl.total_swaps.toFixed(2));
         }
+        if (financial_year_pl.complete_pairs) {
+            console.log("Complete Binance pairs: " + financial_year_pl.complete_pairs);
+            console.log("Reporting currency: " + financial_year_pl.quote_currency);
+            console.log("Ignored funding/transfer records: " + financial_year_pl.ignored_funding_records);
+            console.log("Ignored cross-crypto conversions: " + financial_year_pl.ignored_cross_crypto_conversions);
+            const unmatched = financial_year_pl.unmatched_disposal_quantity || {};
+            if (Object.keys(unmatched).length > 0) {
+                console.log("Unmatched disposal quantity: " + JSON.stringify(unmatched));
+            }
+        }
         console.log("Total cost: " + financial_year_pl.total_cost.toFixed(2));
         console.log("Total profit eligible for discount: " + financial_year_pl.profit_discount);
         console.log("Total buy (inc. brokerage): " + financial_year_pl.total_buy.toFixed(2));

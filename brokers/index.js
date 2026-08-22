@@ -6,6 +6,7 @@
 
 const CommSec = require('./commsec');
 const FPMarkets = require('./fpmarkets');
+const Binance = require('./binance');
 const SelfWealth = require('./selfwealth');
 const Any = require('./any');
 
@@ -60,6 +61,8 @@ const identifyBroker = (csvContent) => {
         return "fpmarkets";
     } else if (header.startsWith("ID,Open Time,Close Time,Account Code,Buy or Sell,Currency,Stock,Volume,Open Price,Close Price,Commission,Swaps,Profit")) {
         return "fpmarkets";
+    } else if (header.startsWith("User ID,Time,Account,Operation,Coin,Change,Remark")) {
+        return "binance";
     }
     return null;
 };
@@ -68,6 +71,7 @@ class Brokers {
     constructor() {
         this.commsec = new CommSec();
         this.fpmarkets = new FPMarkets();
+        this.binance = new Binance();
         this.selfwealth = new SelfWealth();
         this.normalizeCommSecData = normalizeCommSecData;
         this.normalizeFPMarketsData = normalizeFPMarketsData;
@@ -120,6 +124,12 @@ class Brokers {
                 // col-price
                 // col-type
                 return new Any(options);
+            }
+
+            // Binance keeps ledger rows while multiple part files are loaded,
+            // so each calculation needs a fresh adapter instance.
+            if (name.toLowerCase() === 'binance') {
+                return new Binance(options);
             }
 
             const brokerInstance = this[name.toLowerCase()]; // Ensure lowercase access
