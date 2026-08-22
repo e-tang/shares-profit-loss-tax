@@ -123,6 +123,7 @@ declare class FinancialYear {
     gross_profit?: number;
     total_commission?: number;
     total_swaps?: number;
+    broker_reported_net?: boolean;
     complete_pairs?: number;
     quote_currency?: string;
     reporting_currency?: string;

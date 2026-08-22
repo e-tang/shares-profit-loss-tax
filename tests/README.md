@@ -24,6 +24,7 @@ npm test tests/models.test.js
 - `broker-base.test.js` - Tests for the base broker class
 - `commsec-broker.test.js` - Tests for the CommSec broker implementation
 - `fpmarkets-broker.test.js` - Tests legacy FP Markets and cTrader closed-position formats
+- `pepperstone-broker.test.js` - Tests Pepperstone cTrader CSV/XLSX closed-position formats
 - `transaction-sort.test.js` - Tests for the transaction sorting function
 - `integration.test.js` - Integration tests with mock CSV data
 
@@ -34,6 +35,7 @@ Mock CSV data for testing is located in the `test-data` directory:
 - `mock-commsec.csv` - Sample CommSec CSV data in pre-2023 format
 - `mock-commsec-new.csv` - Sample CommSec CSV data in post-2023 format
 - `mock-fpmarkets-ctrader.csv` - Sample FP Markets cTrader closed-position data
+- `mock-pepperstone.csv` - Sample Pepperstone cTrader `Net AUD` closed-position data
 
 ## Test Coverage
 

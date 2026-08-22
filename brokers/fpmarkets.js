@@ -44,14 +44,14 @@ class FPMarkets extends Broker {
 
     parse_date_time(value) {
         const match = String(value).trim().match(
-            /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?)?$/i
+            /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(?:\s*(AM|PM))?)?$/i
         );
         if (!match) {
             throw new Error(`Invalid FP Markets date/time: ${value}`);
         }
 
         let hour = Number(match[4] || 0);
-        const meridiem = (match[7] || '').toUpperCase();
+        const meridiem = (match[8] || '').toUpperCase();
         if (meridiem === 'AM' && hour === 12) {
             hour = 0;
         }
@@ -65,7 +65,8 @@ class FPMarkets extends Broker {
             Number(match[1]),
             hour,
             Number(match[5] || 0),
-            Number(match[6] || 0)
+            Number(match[6] || 0),
+            Number(String(match[7] || '0').padEnd(3, '0'))
         );
     }
 

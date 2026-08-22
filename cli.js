@@ -63,9 +63,15 @@ try {
         console.log("Total profit / loss: " + financial_year_pl.profit.toFixed(2));
         if (financial_year_pl.closed_positions) {
             console.log("Closed positions: " + financial_year_pl.closed_positions);
-            console.log("Gross trading profit / loss: " + financial_year_pl.gross_profit.toFixed(2));
-            console.log("Commission: " + financial_year_pl.total_commission.toFixed(2));
-            console.log("Swaps: " + financial_year_pl.total_swaps.toFixed(2));
+            if (financial_year_pl.broker_reported_net) {
+                console.log("Broker-reported net profit / loss: " + financial_year_pl.profit.toFixed(2));
+                console.log("Reporting currency: " + financial_year_pl.reporting_currency);
+            }
+            else {
+                console.log("Gross trading profit / loss: " + financial_year_pl.gross_profit.toFixed(2));
+                console.log("Commission: " + financial_year_pl.total_commission.toFixed(2));
+                console.log("Swaps: " + financial_year_pl.total_swaps.toFixed(2));
+            }
         }
         if (financial_year_pl.complete_pairs) {
             console.log("Complete Binance pairs: " + financial_year_pl.complete_pairs);

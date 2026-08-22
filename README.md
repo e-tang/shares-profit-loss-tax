@@ -1,6 +1,6 @@
 # SPROLOSTA
 
-Shares PROfit / LOSs TAx (`sprolosta`) is a Node.js command-line tool and library for calculating realised trading profit and loss by Australian financial year (1 July to 30 June). It supports CommSec, FP Markets, Binance closed-pair calculations, and column-mapped generic CSV exports.
+Shares PROfit / LOSs TAx (`sprolosta`) is a Node.js command-line tool and library for calculating realised trading profit and loss by Australian financial year (1 July to 30 June). It supports CommSec, FP Markets, Pepperstone cTrader, Binance closed-pair calculations, and column-mapped generic CSV exports.
 
 The calculator groups transactions by symbol, sorts them chronologically, maintains an average cost for each open position, assigns realised results to the financial year in which a position is closed, and separately reports profitable amounts it considers eligible for the 12-month CGT discount.
 
@@ -70,6 +70,21 @@ on or before the transaction date, which covers weekends and RBA holidays.
 This method treats 1 USDT as 1 USD and records both the AUD calculation and its
 USDT reconciliation. Binance results are never placed in the share CGT-discount
 bucket.
+
+### Pepperstone cTrader
+
+Pepperstone cTrader closed-position CSV and XLSX reports beginning with this
+header are supported directly:
+
+```text
+ID,Order ID,Symbol,Opening direction,Opening time,Closing time,Entry price,Closing price,Closing Quantity,Closing volume,Net AUD,Label
+```
+
+Each row is an already-closed CFD position. SPROLOSTA uses the broker-reported
+`Net AUD` amount and assigns it to the Australian financial year containing
+`Closing time`. These results are not placed in the share CGT-discount bucket.
+The report does not expose separate commission or swap values, so SPROLOSTA
+does not attempt to reconstruct them.
 
 ### Other brokers and generic CSV files
 
@@ -161,6 +176,15 @@ Download the RBA `Exchange Rates – Daily – 2023 to Current` F11.1 CSV from t
 Keep the exact source file or a documented subset of every observation used
 with the calculation records.
 
+### Pepperstone cTrader XLSX
+
+```bash
+sprolosta --broker pepperstone --save false --year 2025 cTrader-history.xlsx
+```
+
+Pepperstone can also be auto-detected from the workbook's first worksheet. XLSX
+input is read directly; a manual conversion to CSV is not required.
+
 ### Selected symbols
 
 ```bash
@@ -223,7 +247,7 @@ Commission, fee, and tax columns are parsed but are not currently added to `tota
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--broker` | auto-detect/any | `commsec`, `fpmarkets`, `binance`, or `any` |
+| `--broker` | auto-detect/any | `commsec`, `fpmarkets`, `pepperstone`, `binance`, or `any` |
 | `--save` | `true` in the CLI | Write the calculated portfolio JSON |
 | `--portfolio-file` | `portfolio.json` | Portfolio output path used by `--save` |
 | `--year` | all | Starting year of the Australian financial year |
@@ -251,6 +275,11 @@ The report contains:
 
 For FP Markets cTrader input, the report also shows closed-position count, gross trading P/L, commission, and swaps. Buy/sell turnover and portfolio cost remain zero because the export does not provide account-currency transaction values and contains only closed positions.
 
+For Pepperstone cTrader input, the report shows closed-position count and the
+broker-reported net result in AUD. Buy/sell turnover and portfolio cost remain
+zero because the export contains closed positions rather than account-currency
+transaction values.
+
 For Binance input, the report shows complete-pair count, reporting and quote
 currencies, the USDT reconciliation, FX source and method, ignored
 funding/transfer records, and ignored cross-crypto conversions. With
@@ -272,12 +301,15 @@ Do not simply halve the eligible figure to prepare a tax return. Capital losses,
 - Realised P/L is assigned to the financial year of the closing transaction.
 - Brokerage and other costs affect results when they are included in the parsed transaction total.
 - The generic commission/fee/tax mappings alone do not change the transaction total.
-- The CSV reader splits rows on commas and is not a full RFC-compliant CSV parser; embedded commas in quoted fields may be misread.
+- CSV fields containing commas and escaped quotes are supported. Embedded newlines inside a quoted field are not supported.
 - Transactions are not deduplicated across files.
 - Automatic consolidation/split data is limited to entries in `data/cos.json`. Other corporate actions must be reviewed and adjusted before relying on the report.
 - A malformed file may be logged and skipped while other files continue processing, so always reconcile the reported symbol count, first/last dates, trade count, and turnover with the source exports.
 - The library accepts either a CSV-content string or an array of file paths. Use file arrays when combining multiple exports.
 - FP Markets cTrader results use the broker-reported closed-position P/L, commission, and swaps. They do not attempt to reconstruct CFD contract values from price and volume.
+- Pepperstone cTrader results use the broker-reported `Net AUD` value. The
+  supplied report has no separate commission or swaps columns, so those costs
+  are assumed to already be reflected in `Net AUD`.
 - Binance closed-pair results use FIFO inventory matching solely to distinguish
   known USDT-costed quantities from unknown inventory. Deposits, withdrawals,
   wallet transfers, and unvalued cross-crypto quantities do not contribute to

@@ -6,6 +6,7 @@
 
 const CommSec = require('./commsec');
 const FPMarkets = require('./fpmarkets');
+const Pepperstone = require('./pepperstone');
 const Binance = require('./binance');
 const SelfWealth = require('./selfwealth');
 const Any = require('./any');
@@ -61,6 +62,8 @@ const identifyBroker = (csvContent) => {
         return "fpmarkets";
     } else if (header.startsWith("ID,Open Time,Close Time,Account Code,Buy or Sell,Currency,Stock,Volume,Open Price,Close Price,Commission,Swaps,Profit")) {
         return "fpmarkets";
+    } else if (header.startsWith("ID,Order ID,Symbol,Opening direction,Opening time,Closing time,Entry price,Closing price,Closing Quantity,Closing volume,Net AUD,Label")) {
+        return "pepperstone";
     } else if (header.startsWith("User ID,Time,Account,Operation,Coin,Change,Remark")) {
         return "binance";
     }
@@ -71,6 +74,7 @@ class Brokers {
     constructor() {
         this.commsec = new CommSec();
         this.fpmarkets = new FPMarkets();
+        this.pepperstone = new Pepperstone();
         this.binance = new Binance();
         this.selfwealth = new SelfWealth();
         this.normalizeCommSecData = normalizeCommSecData;

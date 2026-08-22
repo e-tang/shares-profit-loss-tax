@@ -9,6 +9,7 @@ const utils = require('./lib/utils');
 const { calculateIncome } = require('./lib/income');
 const fs = require('fs');
 const app_data = require('./data');
+const { xlsxBufferToCsv } = require('./lib/xlsx');
 
 const { off } = require('process');
 
@@ -65,11 +66,14 @@ function processTrades(input, options = {}) {
     // Load trades
     let all_trades = new models.Trades();
     const isCsvContent = typeof input === 'string' && input.includes('\n');
+    const readInputFile = file => /\.xlsx$/i.test(file)
+        ? xlsxBufferToCsv(fs.readFileSync(file))
+        : fs.readFileSync(file, 'utf8');
 
     let broker_name = "any";
     if (!opts.broker) {
         const firstFile = Array.isArray(input) ? input[0] : input;
-        const csvContent = isCsvContent ? input : fs.readFileSync(firstFile, "utf-8");
+        const csvContent = isCsvContent ? input : readInputFile(firstFile);
         broker_name = brokers.identifyBroker(csvContent);
     }
     else
@@ -112,7 +116,7 @@ function processTrades(input, options = {}) {
                         throw new Error("File not found: " + files[i]);
                     }
                     console.log("Loading transactions file: " + files[i])
-                    let content = fs.readFileSync(files[i], 'utf8');
+                    let content = readInputFile(files[i]);
                     const result = broker.load_content(all_trades, content, {
                         index: total_count,
                         offset: offset,

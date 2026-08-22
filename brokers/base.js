@@ -5,6 +5,7 @@
 
 const models = require("../lib/models");
 const utils = require("../lib/utils");
+const { parseCsvLine } = require("../lib/csv");
 
 class Broker {
     constructor(options) {
@@ -534,7 +535,7 @@ class Broker {
             if (this.is_data_line_ended(line)) {
                 break;
             }
-            let fields = line.split(',');
+            let fields = parseCsvLine(line.replace(/\r$/, ''));
             fields = fields.map(function (field) {
                 try {
                     return JSON.parse(field.trim());
